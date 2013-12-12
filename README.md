@@ -1,7 +1,7 @@
 pandoc-jats
 ===========
 
-A Lua [custom writer for Pandoc](http://johnmacfarlane.net/pandoc/README.html#custom-writers) generating JATS XML.
+A Lua [custom writer for Pandoc](http://johnmacfarlane.net/pandoc/README.html#custom-writers) generating [JATS XML](http://jats.nlm.nih.gov/index.html).
 
 ### Installation
 Just download the file `JATS.lua` and put it in a convenient location. Pandoc includes a lua interpreter, so lua need not be installed separately. You need at least Pandoc version 1.12, released September 2013 (this release added YAML metadata and Lua writer support).
