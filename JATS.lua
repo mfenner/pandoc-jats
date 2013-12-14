@@ -82,11 +82,30 @@ function Doc(body, metadata, variables)
     body = string.sub(body, 1, offset - 1)
   end
 
-  body = '<sec>\n<title/>' .. body .. '</sec>\n'
-
   article = metadata['article'] or {}
   journal = metadata['journal'] or {}
-  publisher = metadata['publisher'] or {}
+
+  body = '<sec>\n<title/>' .. body .. '</sec>\n'
+
+  add('<?xml version="1.0" encoding="UTF-8"?>')
+  add('<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.0/JATS-journalpublishing1.dtd">')
+  add('<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" article-type="' ..
+    (article['type'] or '') .. '" dtd-version="1.0">')
+
+  add(front(metadata))
+
+  add('<body>' .. body .. '</body>')
+  add('<back>' .. back .. '</back>')
+
+  add('</article>')
+  return table.concat(buffer,'\n')
+end
+
+function front(metadata)
+  local buffer = {}
+  local function add(s)
+    table.insert(buffer, s)
+  end
 
   -- variables required for validation
   if not (article['publisher-id'] or article['doi'] or article['pmid'] or article['pmcid'] or article['art-access-id']) then
@@ -97,7 +116,6 @@ function Doc(body, metadata, variables)
     journal['publisher-id'] = ''
   end
   if not journal['title'] then journal['title'] = '' end
-  if not publisher['name'] then publisher['name'] = '' end
 
   -- defaults
   article['type'] = article['type'] or 'other'
@@ -109,10 +127,6 @@ function Doc(body, metadata, variables)
     article['pub-date'] = os.date('%Y-%m-%d')
   end
 
-  add('<?xml version="1.0" encoding="UTF-8"?>')
-  add('<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.0/JATS-journalpublishing1.dtd">')
-  add('<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" article-type="' ..
-    article['type'] .. '" dtd-version="1.0">')
   add('<front>')
 
   add('<journal-meta>')
@@ -134,9 +148,9 @@ function Doc(body, metadata, variables)
     add('<issn-l>' .. journal['eissn'] .. '</issn-l>')
   end
   add('<publisher>')
-  add('<publisher-name>' .. publisher['name'] .. '</publisher-name>')
-  if publisher['loc'] then
-    add('<publisher-loc>' .. publisher['loc'] .. '</publisher-loc>')
+  add('<publisher-name>' .. (journal['publisher-name']  or '') .. '</publisher-name>')
+  if journal['publisher-loc'] then
+    add('<publisher-loc>' .. journal['publisher-loc'] .. '</publisher-loc>')
   end
   add('</publisher>')
   add('</journal-meta>')
@@ -164,7 +178,7 @@ function Doc(body, metadata, variables)
   add('</subj-group>')
   if metadata['categories'] then
     add('<subj-group subj-group-type="categories">')
-    for _, category in pairs(metadata['categories']) do
+    for _, category in pairs(article['categories']) do
       add('<subject>' .. category .. '</subject>')
     end
     add('</subj-group>')
@@ -216,10 +230,6 @@ function Doc(body, metadata, variables)
   add('</article-meta>')
   add('</front>')
 
-  add('<body>' .. body .. '</body>')
-  add('<back>' .. back .. '</back>')
-
-  add('</article>')
   return table.concat(buffer,'\n')
 end
 
@@ -291,11 +301,11 @@ function Code(s, attr)
 end
 
 function InlineMath(s)
-  return "\\(" .. escape(s) .. "\\)"
+  return '<inline-formula>' .. escape(s) .. '</inline-formula>'
 end
 
 function DisplayMath(s)
-  return "\\[" .. escape(s) .. "\\]"
+  return '<disp-formula>' .. escape(s) .. '</disp-formula>'
 end
 
 function Note(s)
@@ -381,11 +391,19 @@ function DefinitionList(items)
   local buffer = {}
   for _,item in pairs(items) do
     for k, v in pairs(item) do
-      table.insert(buffer,"<dt>" .. k .. "</dt>\n<dd>" ..
-                        table.concat(v,"</dd>\n<dd>") .. "</dd>")
+      table.insert(buffer,"<def-item>\n<term>" .. k .. "</term>\n<def>" ..
+                        table.concat(v,"</def>\n<def>") .. "</def>\n</def-item>")
     end
   end
-  return "<dl>\n" .. table.concat(buffer, "\n") .. "\n</dl>"
+  return "<def-list>\n" .. table.concat(buffer, "\n") .. "\n</def-list>"
+end
+
+function SingleQuoted(s)
+  return "'" .. s .. "'"
+end
+
+function DoubleQuoted(s)
+  return '"' .. s .. '"'
 end
 
 -- Convert pandoc alignment to something HTML can use.

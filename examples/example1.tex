@@ -1,0 +1,429 @@
+\emph{Article-level metrics (ALMs) provide a wide range of metrics about
+the uptake of an individual journal article by the scientific community
+after publication. They include citations, usage statistics, discussions
+in online comments and social media, social bookmarking, and
+recommendations. In this essay, we describe why article-level metrics
+are an important extension of traditional citation-based journal metrics
+and provide a number of example from ALM data collected for PLOS
+Biology.}
+
+\begin{quote}
+This is an open-access article distributed under the terms of the
+Creative Commons Attribution License, authored by me and
+\href{http://dx.doi.org/10.1371/journal.pbio.1001687}{originally
+published Oct 22, 2013 in PLOS Biology}.
+\end{quote}
+
+The scientific impact of a particular piece of research is reflected in
+how this work is taken up by the scientific community. The first
+systematic approach that was used to assess impact, based on the
+technology available at the time, was to track citations and aggregate
+them by journal. This strategy is not only no longer necessary --- since
+now we can easily track citations for individual articles --- but also,
+and more importantly, journal-based metrics are now considered a poor
+performance measure for individual articles {[}@Campbell2008;
+@Glanzel2013{]}. One major problem with journal-based metrics is the
+variation in citations per article, which means that a small percentage
+of articles can skew, and are responsible for, the majority of the
+journal-based citation impact factor, as shown by Campbell
+{[}-@Campbell2008{]} for the 2004 \emph{Nature} Journal Impact Factor.
+\textbf{Figure 1} further illustrates this point, showing the wide
+distribution of citation counts between \emph{PLOS Biology} research
+articles published in 2010. \emph{PLOS Biology} research articles
+published in 2010 have been cited a median 19 times to date in Scopus,
+but 10\% of them have been cited 50 or more times, and two articles
+{[}@Narendra:2010fw; @Dickson:2010ix{]} more than 300 times. \emph{PLOS
+Biology} metrics are used as examples throughout this essay, and the
+dataset is available in the supporting information (\textbf{Data S1}).
+Similar data are available for an increasing number of other
+publications and organizations.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# code for figure 1: density plots for citation counts for PLOS Biology}
+\CommentTok{# articles published in 2010}
+
+\CommentTok{# load May 20, 2013 ALM report}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"../data/alm_report_plos_biology_2013-05-20.csv"}\NormalTok{, }\DataTypeTok{stringsAsFactors =} \OtherTok{FALSE}\NormalTok{)}
+
+\CommentTok{# only look at research articles}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{subset}\NormalTok{(alm, alm$article_type ==}\StringTok{ "Research Article"}\NormalTok{)}
+
+\CommentTok{# only look at papers published in 2010}
+\NormalTok{alm$publication_date <-}\StringTok{ }\KeywordTok{as.Date}\NormalTok{(alm$publication_date)}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{subset}\NormalTok{(alm, alm$publication_date >}\StringTok{ "2010-01-01"} \NormalTok{&}\StringTok{ }\NormalTok{alm$publication_date <=}
+\StringTok{    "2010-12-31"}\NormalTok{)}
+
+\CommentTok{# labels}
+\NormalTok{colnames <-}\StringTok{ }\KeywordTok{dimnames}\NormalTok{(alm)[[}\DecValTok{2}\NormalTok{]]}
+\NormalTok{plos.color <-}\StringTok{ "#1ebd21"}
+\NormalTok{plos.source <-}\StringTok{ "scopus"}
+
+\NormalTok{plos.xlab <-}\StringTok{ "Scopus Citations"}
+\NormalTok{plos.ylab <-}\StringTok{ "Probability"}
+
+\NormalTok{quantile <-}\StringTok{ }\KeywordTok{quantile}\NormalTok{(alm[, plos.source], }\KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.9}\NormalTok{), }\DataTypeTok{na.rm =} \OtherTok{TRUE}\NormalTok{)}
+
+\CommentTok{# plot the chart}
+\NormalTok{opar <-}\StringTok{ }\KeywordTok{par}\NormalTok{(}\DataTypeTok{mai =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{omi =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.25}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.1}\NormalTok{), }\DataTypeTok{mgp =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{,}
+    \FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{fg =} \StringTok{"black"}\NormalTok{, }\DataTypeTok{cex.main =} \DecValTok{2}\NormalTok{, }\DataTypeTok{cex.lab =} \FloatTok{1.5}\NormalTok{, }\DataTypeTok{col =} \NormalTok{plos.color,}
+    \DataTypeTok{col.main =} \NormalTok{plos.color, }\DataTypeTok{col.lab =} \NormalTok{plos.color, }\DataTypeTok{xaxs =} \StringTok{"i"}\NormalTok{, }\DataTypeTok{yaxs =} \StringTok{"i"}\NormalTok{)}
+
+\NormalTok{d <-}\StringTok{ }\KeywordTok{density}\NormalTok{(alm[, plos.source], }\DataTypeTok{from =} \DecValTok{0}\NormalTok{, }\DataTypeTok{to =} \DecValTok{100}\NormalTok{)}
+\NormalTok{d$x <-}\StringTok{ }\KeywordTok{append}\NormalTok{(d$x, }\DecValTok{0}\NormalTok{)}
+\NormalTok{d$y <-}\StringTok{ }\KeywordTok{append}\NormalTok{(d$y, }\DecValTok{0}\NormalTok{)}
+\KeywordTok{plot}\NormalTok{(d, }\DataTypeTok{type =} \StringTok{"n"}\NormalTok{, }\DataTypeTok{main =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{xlab =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{ylab =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{xlim =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{100}\NormalTok{), }\DataTypeTok{frame.plot =} \OtherTok{FALSE}\NormalTok{)}
+\KeywordTok{polygon}\NormalTok{(d, }\DataTypeTok{col =} \NormalTok{plos.color, }\DataTypeTok{border =} \OtherTok{NA}\NormalTok{)}
+\KeywordTok{mtext}\NormalTok{(plos.xlab, }\DataTypeTok{side =} \DecValTok{1}\NormalTok{, }\DataTypeTok{col =} \NormalTok{plos.color, }\DataTypeTok{cex =} \FloatTok{1.25}\NormalTok{, }\DataTypeTok{outer =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{adj =} \DecValTok{1}\NormalTok{,}
+    \DataTypeTok{at =} \DecValTok{1}\NormalTok{)}
+\KeywordTok{mtext}\NormalTok{(plos.ylab, }\DataTypeTok{side =} \DecValTok{2}\NormalTok{, }\DataTypeTok{col =} \NormalTok{plos.color, }\DataTypeTok{cex =} \FloatTok{1.25}\NormalTok{, }\DataTypeTok{outer =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{adj =} \DecValTok{0}\NormalTok{,}
+    \DataTypeTok{at =} \DecValTok{1}\NormalTok{, }\DataTypeTok{las =} \DecValTok{1}\NormalTok{)}
+
+\KeywordTok{par}\NormalTok{(opar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{/images/2013-12-11_figure_1.svg}
+\caption{\textbf{Figure 1. Citation counts for PLOS Biology articles
+published in 2010.} Scopus citation counts plotted as a probability
+distribution for all 197 \emph{PLOS Biology} research articles published
+in 2010. Data collected May 20, 2013. Median 19 citations; 10\% of
+papers have at least 50 citations.}
+\end{figure}
+
+Scientific impact is a multi-dimensional construct that can not be
+adequately measured by any single indicator {[}@Glanzel2013;
+@bollenEtal2009; @Schekman2013{]}. To this end, PLOS has collected and
+displayed a variety of metrics for all its articles since 2009. The
+array of different categorised article-level metrics (ALMs) used and
+provided by PLOS as of August 2013 are shown in \textbf{Figure 2}. In
+addition to citations and usage statistics, i.e., how often an article
+has been viewed and downloaded, PLOS also collects metrics about: how
+often an article has been saved in online reference managers, such as
+Mendeley; how often an article has been discussed in its comments
+section online, and also in science blogs or in social media; and how
+often an article has been recommended by other scientists. These
+additional metrics provide valuable information that we would miss if we
+only consider citations. Two important shortcomings of citation-based
+metrics are that (1) they take years to accumulate and (2) citation
+analysis is not always the best indicator of impact in more practical
+fields, such as clinical medicine {[}@VanEck2013{]}. Usage statistics
+often better reflect the impact of work in more practical fields, and
+they also sometimes better highlight articles of general interest (for
+example, the 2006 \emph{PLOS Biology} article on the citation advantage
+of Open Access articles {[}@Eysenbach2006{]}, one of the 10 most-viewed
+articles published in \emph{PLOS Biology}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{/images/2013-12-11_figure_2.png}
+\caption{\textbf{Figure 2. Article-level metrics used by PLOS in August
+2013 and their categories.} Taken from {[}@Lin2013{]} with permission by
+the authors.}
+\end{figure}
+
+A bubble chart showing all 2010 \emph{PLOS Biology} articles
+(\textbf{Figure 3}) gives a good overview of the year's views and
+citations, plus it shows the influence that the article type (as
+indicated by dot color) has on an article's performance as measured by
+these metrics. The weekly \emph{PLOS Biology} publication schedule is
+reflected in this figure, with articles published on the same day
+present in a vertical line. \textbf{Figure 3} also shows that the two
+most highly cited 2010 \emph{PLOS Biology} research articles are also
+among the most viewed (indicated by the red arrows), but overall there
+isn't a strong correlation between citations and views. The most-viewed
+article published in 2010 in \emph{PLOS Biology} is an essay on
+Darwinian selection in robots {[}@Floreano2010{]}. Detailed usage
+statistics also allow speculatulation about the different ways that
+readers access and make use of published literature; some articles are
+browsed or read online due to general interest while others that are
+downloaded (and perhaps also printed) may reflect the reader's intention
+to look at the data and results in detail and to return to the article
+more than once.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# code for figure 3: Bubblechart views vs. citations for PLOS Biology}
+\CommentTok{# articles published in 2010.}
+
+\CommentTok{# Load required libraries}
+\KeywordTok{library}\NormalTok{(plyr)}
+
+\CommentTok{# load May 20, 2013 ALM report}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"../data/alm_report_plos_biology_2013-05-20.csv"}\NormalTok{, }\DataTypeTok{stringsAsFactors =} \OtherTok{FALSE}\NormalTok{,}
+    \DataTypeTok{na.strings =} \KeywordTok{c}\NormalTok{(}\StringTok{"0"}\NormalTok{))}
+
+\CommentTok{# only look at papers published in 2010}
+\NormalTok{alm$publication_date <-}\StringTok{ }\KeywordTok{as.Date}\NormalTok{(alm$publication_date)}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{subset}\NormalTok{(alm, alm$publication_date >}\StringTok{ "2010-01-01"} \NormalTok{&}\StringTok{ }\NormalTok{alm$publication_date <=}
+\StringTok{    "2010-12-31"}\NormalTok{)}
+
+\CommentTok{# make sure counter values are numbers}
+\NormalTok{alm$counter_html <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(alm$counter_html)}
+
+\CommentTok{# lump all papers together that are not research articles}
+\NormalTok{reassignType <-}\StringTok{ }\NormalTok{function(x) if (x ==}\StringTok{ "Research Article"}\NormalTok{) }\DecValTok{1} \NormalTok{else }\DecValTok{0}
+\NormalTok{alm$article_group <-}\StringTok{ }\KeywordTok{aaply}\NormalTok{(alm$article_type, }\DecValTok{1}\NormalTok{, reassignType)}
+
+\CommentTok{# calculate article age in months}
+\NormalTok{alm$age_in_months <-}\StringTok{ }\NormalTok{(}\KeywordTok{Sys.Date}\NormalTok{() -}\StringTok{ }\NormalTok{alm$publication_date)/}\FloatTok{365.25} \NormalTok{*}\StringTok{ }\DecValTok{12}
+\NormalTok{start_age_in_months <-}\StringTok{ }\KeywordTok{floor}\NormalTok{(}\KeywordTok{as.numeric}\NormalTok{(}\KeywordTok{Sys.Date}\NormalTok{() -}\StringTok{ }\KeywordTok{as.Date}\NormalTok{(}\KeywordTok{strptime}\NormalTok{(}\StringTok{"2010-12-31"}\NormalTok{,}
+    \DataTypeTok{format =} \StringTok{"%Y-%m-%d"}\NormalTok{)))/}\FloatTok{365.25} \NormalTok{*}\StringTok{ }\DecValTok{12}\NormalTok{)}
+
+\CommentTok{# chart variables}
+\NormalTok{x <-}\StringTok{ }\NormalTok{alm$age_in_months}
+\NormalTok{y <-}\StringTok{ }\NormalTok{alm$counter}
+\NormalTok{z <-}\StringTok{ }\NormalTok{alm$scopus}
+
+\NormalTok{xlab <-}\StringTok{ "Age in Months"}
+\NormalTok{ylab <-}\StringTok{ "Total Views"}
+
+\NormalTok{labels <-}\StringTok{ }\NormalTok{alm$article_group}
+\NormalTok{col.main <-}\StringTok{ "#1ebd21"}
+\NormalTok{col <-}\StringTok{ "#666358"}
+
+\CommentTok{# calculate bubble diameter}
+\NormalTok{z <-}\StringTok{ }\KeywordTok{sqrt}\NormalTok{(z/pi)}
+
+\CommentTok{# calculate bubble color}
+\NormalTok{getColor <-}\StringTok{ }\NormalTok{function(x) }\KeywordTok{c}\NormalTok{(}\StringTok{"#c9c9c7"}\NormalTok{, }\StringTok{"#1ebd21"}\NormalTok{)[x +}\StringTok{ }\DecValTok{1}\NormalTok{]}
+\NormalTok{colors <-}\StringTok{ }\KeywordTok{aaply}\NormalTok{(labels, }\DecValTok{1}\NormalTok{, getColor)}
+
+\CommentTok{# plot the chart}
+\NormalTok{opar <-}\StringTok{ }\KeywordTok{par}\NormalTok{(}\DataTypeTok{mai =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{omi =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.25}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.1}\NormalTok{), }\DataTypeTok{mgp =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{,}
+    \FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{fg =} \StringTok{"black"}\NormalTok{, }\DataTypeTok{cex =} \DecValTok{1}\NormalTok{, }\DataTypeTok{cex.main =} \DecValTok{2}\NormalTok{, }\DataTypeTok{cex.lab =} \FloatTok{1.5}\NormalTok{, }\DataTypeTok{col =} \StringTok{"white"}\NormalTok{,}
+    \DataTypeTok{col.main =} \NormalTok{col.main, }\DataTypeTok{col.lab =} \NormalTok{col)}
+
+\KeywordTok{plot}\NormalTok{(x, y, }\DataTypeTok{type =} \StringTok{"n"}\NormalTok{, }\DataTypeTok{xlim =} \KeywordTok{c}\NormalTok{(start_age_in_months, start_age_in_months +}\StringTok{ }\DecValTok{13}\NormalTok{),}
+    \DataTypeTok{ylim =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{60000}\NormalTok{), }\DataTypeTok{xlab =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{ylab =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{las =} \DecValTok{1}\NormalTok{)}
+\KeywordTok{symbols}\NormalTok{(x, y, }\DataTypeTok{circles =} \NormalTok{z, }\DataTypeTok{inches =} \KeywordTok{exp}\NormalTok{(}\FloatTok{1.3}\NormalTok{)/}\DecValTok{15}\NormalTok{, }\DataTypeTok{bg =} \NormalTok{colors, }\DataTypeTok{xlim =} \KeywordTok{c}\NormalTok{(start_age_in_months,}
+    \NormalTok{start_age_in_months +}\StringTok{ }\DecValTok{13}\NormalTok{), }\DataTypeTok{ylim =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, ymax), }\DataTypeTok{xlab =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{ylab =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{las =} \DecValTok{1}\NormalTok{,}
+    \DataTypeTok{add =} \OtherTok{TRUE}\NormalTok{)}
+\KeywordTok{mtext}\NormalTok{(xlab, }\DataTypeTok{side =} \DecValTok{1}\NormalTok{, }\DataTypeTok{col =} \NormalTok{col.main, }\DataTypeTok{cex =} \FloatTok{1.25}\NormalTok{, }\DataTypeTok{outer =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{adj =} \DecValTok{1}\NormalTok{, }\DataTypeTok{at =} \DecValTok{1}\NormalTok{)}
+\KeywordTok{mtext}\NormalTok{(ylab, }\DataTypeTok{side =} \DecValTok{2}\NormalTok{, }\DataTypeTok{col =} \NormalTok{col.main, }\DataTypeTok{cex =} \FloatTok{1.25}\NormalTok{, }\DataTypeTok{outer =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{adj =} \DecValTok{0}\NormalTok{, }\DataTypeTok{at =} \DecValTok{1}\NormalTok{,}
+    \DataTypeTok{las =} \DecValTok{1}\NormalTok{)}
+
+\KeywordTok{par}\NormalTok{(opar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{/images/2013-12-11_figure_3.svg}
+\caption{\textbf{Figure 3. Views vs.~citations for PLOS Biology articles
+published in 2010.} All 304 \emph{PLOS Biology} articles published in
+2010. Bubble size correlates with number of Scopus citations. Research
+articles are labeled green; all other articles are grey. Red arrows
+indicate the two most highly cited papers. Data collected May 20, 2013.}
+\end{figure}
+
+When readers first see an interesting article, their response is often
+to view or download it. By contrast, a citation may be one of the last
+outcomes of their interest, occuring only about 1 in 300 times a PLOS
+paper is viewed online. A lot of things happen in between these
+potential responses, ranging from discussions in comments, social media,
+and blogs, to bookmarking, to linking from websites. These activities
+are usually subsumed under the term ``altmetrics,'' and their variety
+can be overwhelming. Therefore, it helps to group them together into
+categories, and several organizations, including PLOS, are using the
+category labels of Viewed, Cited, Saved, Discussed, and Recommended
+(\textbf{Figures 2 and 4}, see also {[}@Lin2013{]}).
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# code for figure 4: bar plot for Article-level metrics for PLOS Biology}
+
+\CommentTok{# Load required libraries}
+\KeywordTok{library}\NormalTok{(reshape2)}
+
+\CommentTok{# load May 20, 2013 ALM report}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"../data/alm_report_plos_biology_2013-05-20.csv"}\NormalTok{, }\DataTypeTok{stringsAsFactors =} \OtherTok{FALSE}\NormalTok{,}
+    \DataTypeTok{na.strings =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\StringTok{"0"}\NormalTok{))}
+
+\CommentTok{# only look at research articles}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{subset}\NormalTok{(alm, alm$article_type ==}\StringTok{ "Research Article"}\NormalTok{)}
+
+\CommentTok{# make sure columns are in the right format}
+\NormalTok{alm$counter_html <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(alm$counter_html)}
+\NormalTok{alm$mendeley <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(alm$mendeley)}
+
+\CommentTok{# options}
+\NormalTok{plos.color <-}\StringTok{ "#1ebd21"}
+\NormalTok{plos.colors <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"#a17f78"}\NormalTok{, }\StringTok{"#ad9a27"}\NormalTok{, }\StringTok{"#ad9a27"}\NormalTok{, }\StringTok{"#ad9a27"}\NormalTok{, }\StringTok{"#ad9a27"}\NormalTok{, }\StringTok{"#ad9a27"}\NormalTok{,}
+    \StringTok{"#dcebdd"}\NormalTok{, }\StringTok{"#dcebdd"}\NormalTok{, }\StringTok{"#789aa1"}\NormalTok{, }\StringTok{"#789aa1"}\NormalTok{, }\StringTok{"#789aa1"}\NormalTok{, }\StringTok{"#304345"}\NormalTok{, }\StringTok{"#304345"}\NormalTok{)}
+
+\CommentTok{# use subset of columns}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{subset}\NormalTok{(alm, }\DataTypeTok{select =} \KeywordTok{c}\NormalTok{(}\StringTok{"f1000"}\NormalTok{, }\StringTok{"wikipedia"}\NormalTok{, }\StringTok{"researchblogging"}\NormalTok{, }\StringTok{"comments"}\NormalTok{,}
+    \StringTok{"facebook"}\NormalTok{, }\StringTok{"twitter"}\NormalTok{, }\StringTok{"citeulike"}\NormalTok{, }\StringTok{"mendeley"}\NormalTok{, }\StringTok{"pubmed"}\NormalTok{, }\StringTok{"crossref"}\NormalTok{, }\StringTok{"scopus"}\NormalTok{,}
+    \StringTok{"pmc_html"}\NormalTok{, }\StringTok{"counter_html"}\NormalTok{))}
+
+\CommentTok{# calculate percentage of values that are not missing (i.e. have a count of}
+\CommentTok{# at least 1)}
+\NormalTok{colSums <-}\StringTok{ }\KeywordTok{colSums}\NormalTok{(!}\KeywordTok{is.na}\NormalTok{(alm)) *}\StringTok{ }\DecValTok{100}\NormalTok{/}\KeywordTok{length}\NormalTok{(alm$counter_html)}
+\NormalTok{exactSums <-}\StringTok{ }\KeywordTok{sum}\NormalTok{(}\KeywordTok{as.numeric}\NormalTok{(alm$pmc_html), }\DataTypeTok{na.rm =} \OtherTok{TRUE}\NormalTok{)}
+
+\CommentTok{# plot the chart}
+\NormalTok{opar <-}\StringTok{ }\KeywordTok{par}\NormalTok{(}\DataTypeTok{mar =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{, }\FloatTok{7.25}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.1}\NormalTok{) +}\StringTok{ }\FloatTok{0.1}\NormalTok{, }\DataTypeTok{omi =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.1}\NormalTok{, }\FloatTok{0.1}\NormalTok{),}
+    \DataTypeTok{col.main =} \NormalTok{plos.color)}
+
+\NormalTok{plos.names <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"F1000Prime"}\NormalTok{, }\StringTok{"Wikipedia"}\NormalTok{, }\StringTok{"Research Blogging"}\NormalTok{, }\StringTok{"PLOS Comments"}\NormalTok{,}
+    \StringTok{"Facebook"}\NormalTok{, }\StringTok{"Twitter"}\NormalTok{, }\StringTok{"CiteULike"}\NormalTok{, }\StringTok{"Mendeley"}\NormalTok{, }\StringTok{"PubMed Citations"}\NormalTok{, }\StringTok{"CrossRef"}\NormalTok{,}
+    \StringTok{"Scopus"}\NormalTok{, }\StringTok{"PMC HTML Views"}\NormalTok{, }\StringTok{"PLOS HTML Views"}\NormalTok{)}
+\NormalTok{y <-}\StringTok{ }\KeywordTok{barplot}\NormalTok{(colSums, }\DataTypeTok{horiz =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{col =} \NormalTok{plos.colors, }\DataTypeTok{border =} \OtherTok{NA}\NormalTok{, }\DataTypeTok{xlab =} \NormalTok{plos.names,}
+    \DataTypeTok{xlim =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{120}\NormalTok{), }\DataTypeTok{axes =} \OtherTok{FALSE}\NormalTok{, }\DataTypeTok{names.arg =} \NormalTok{plos.names, }\DataTypeTok{las =} \DecValTok{1}\NormalTok{, }\DataTypeTok{adj =} \DecValTok{0}\NormalTok{)}
+\KeywordTok{text}\NormalTok{(colSums +}\StringTok{ }\DecValTok{6}\NormalTok{, y, }\DataTypeTok{labels =} \KeywordTok{sprintf}\NormalTok{(}\StringTok{"%1.0f%%"}\NormalTok{, colSums))}
+
+\KeywordTok{par}\NormalTok{(opar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{/images/2013-12-11_figure_4.svg}
+\caption{\textbf{Figure 4. Article-level metrics for PLOS Biology.}
+Proportion of all 1,706 \emph{PLOS Biology} research articles published
+up to May 20, 2013 mentioned by particular article-level metrics source.
+Colors indicate categories (Viewed, Cited, Saved, Discussed,
+Recommended), as used on the PLOS website.}
+\end{figure}
+
+All \emph{PLOS Biology} articles are viewed and downloaded, and almost
+all of them (all research articles and nearly all front matter) will be
+cited sooner or later. Almost all of them will also be bookmarked in
+online reference managers, such as Mendeley, but the percentage of
+articles that are discussed online is much smaller. Some of these
+percentages are time dependent; the use of social media discussion
+platforms, such as Twitter and Facebook for example, has increased in
+recent years (93\% of \emph{PLOS Biology} research articles published
+since June 2012 have been discussed on Twitter, and 63\% mentioned on
+Facebook). These are the locations where most of the online discussion
+around published articles currently seems to take place; the percentage
+of papers with comments on the PLOS website or that have science blog
+posts written about them is much smaller. Not all of this online
+discussion is about research articles, and perhaps, not surprisingly,
+the most-tweeted PLOS article overall (with more than 1,100 tweets) is a
+\emph{PLOS Biology} perspective on the use of social media for
+scientists {[}@Bik2013{]}.
+
+Some metrics are not so much indicators of a broad online discussion,
+but rather focus on highlighting articles of particular interest. For
+example, science blogs allow a more detailed discussion of an article as
+compared to comments or tweets, and journals themselves sometimes choose
+to highlight a paper on their own blogs, allowing for a more digestible
+explanation of the science for the non-expert reader {[}@Fausto2012{]}.
+Coverage by other bloggers also serves the same purpose; a good example
+of this is one recent post on the OpenHelix Blog {[}@Video2012{]} that
+contains video footage of the second author of a 2010 \emph{PLOS
+Biology} article {[}@Dalloul2010{]} discussing the turkey genome.
+
+F1000Prime, a commercial service of recommendations by expert
+scientists, was added to the PLOS Article-Level Metrics in August 2013.
+We now highlight on the PLOS website when any articles have received at
+least one recommendation within F1000Prime. We also monitor when an
+article has been cited within the widely used modern-day online
+encyclopedia, Wikipedia. A good example of the latter is the Tasmanian
+devil Wikipedia page {[}@Tasmanian2013{]} that links to a \emph{PLOS
+Biology} research article published in 2010 {[}@Nilsson2010{]}. While a
+F1000Prime recommendation is a strong endorsement from peer(s) in the
+scientific community, being included in a Wikipedia page is akin to
+making it into a textbook about the subject area and being read by a
+much wider audience that goes beyond the scientific community.
+
+\emph{PLOS Biology} is the PLOS journal with the highest percentage of
+articles recommended in F1000Prime and mentioned in Wikipedia, but there
+is only partial overlap between the two groups of articles because they
+focus on different audiences (\textbf{Figure 5}). These recommendations
+and mentions in turn show correlations with other metrics, but not
+simple ones; you can't assume, for example, that highly cited articles
+are more likely to be recommended by F1000Prime, so it will be
+interesting to monitor these trends now that we include this
+information.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# code for figure 5: Venn diagram F1000 vs. Wikipedia for PLOS Biology}
+\CommentTok{# articles}
+
+\CommentTok{# load required libraries}
+\KeywordTok{library}\NormalTok{(}\StringTok{"plyr"}\NormalTok{)}
+\KeywordTok{library}\NormalTok{(}\StringTok{"VennDiagram"}\NormalTok{)}
+
+\CommentTok{# load May 20, 2013 ALM report}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\StringTok{"../data/alm_report_plos_biology_2013-05-20.csv"}\NormalTok{, }\DataTypeTok{stringsAsFactors =} \OtherTok{FALSE}\NormalTok{)}
+
+\CommentTok{# only look at research articles}
+\NormalTok{alm <-}\StringTok{ }\KeywordTok{subset}\NormalTok{(alm, alm$article_type ==}\StringTok{ "Research Article"}\NormalTok{)}
+
+\CommentTok{# group articles based on values in Wikipedia and F1000}
+\NormalTok{reassignWikipedia <-}\StringTok{ }\NormalTok{function(x) if (x >}\StringTok{ }\DecValTok{0}\NormalTok{) }\DecValTok{1} \NormalTok{else }\DecValTok{0}
+\NormalTok{alm$wikipedia_bin <-}\StringTok{ }\KeywordTok{aaply}\NormalTok{(alm$wikipedia, }\DecValTok{1}\NormalTok{, reassignWikipedia)}
+\NormalTok{reassignF1000 <-}\StringTok{ }\NormalTok{function(x) if (x >}\StringTok{ }\DecValTok{0}\NormalTok{) }\DecValTok{2} \NormalTok{else }\DecValTok{0}
+\NormalTok{alm$f1000_bin <-}\StringTok{ }\KeywordTok{aaply}\NormalTok{(alm$f1000, }\DecValTok{1}\NormalTok{, reassignF1000)}
+\NormalTok{alm$article_group =}\StringTok{ }\NormalTok{alm$wikipedia_bin +}\StringTok{ }\NormalTok{alm$f1000_bin}
+\NormalTok{reassignCombined <-}\StringTok{ }\NormalTok{function(x) if (x ==}\StringTok{ }\DecValTok{3}\NormalTok{) }\DecValTok{1} \NormalTok{else }\DecValTok{0}
+\NormalTok{alm$combined_bin <-}\StringTok{ }\KeywordTok{aaply}\NormalTok{(alm$article_group, }\DecValTok{1}\NormalTok{, reassignCombined)}
+\NormalTok{reassignNo <-}\StringTok{ }\NormalTok{function(x) if (x ==}\StringTok{ }\DecValTok{0}\NormalTok{) }\DecValTok{1} \NormalTok{else }\DecValTok{0}
+\NormalTok{alm$no_bin <-}\StringTok{ }\KeywordTok{aaply}\NormalTok{(alm$article_group, }\DecValTok{1}\NormalTok{, reassignNo)}
+
+\CommentTok{# remember to divide f1000_bin by 2, as this is the default value}
+\NormalTok{summary <-}\StringTok{ }\KeywordTok{colSums}\NormalTok{(}\KeywordTok{subset}\NormalTok{(alm, }\DataTypeTok{select =} \KeywordTok{c}\NormalTok{(}\StringTok{"wikipedia_bin"}\NormalTok{, }\StringTok{"f1000_bin"}\NormalTok{, }\StringTok{"combined_bin"}\NormalTok{,}
+    \StringTok{"no_bin"}\NormalTok{)), }\DataTypeTok{na.rm =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{rows <-}\StringTok{ }\KeywordTok{nrow}\NormalTok{(alm)}
+
+\CommentTok{# options}
+\NormalTok{plos.colors <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"#c9c9c7"}\NormalTok{, }\StringTok{"#0000ff"}\NormalTok{, }\StringTok{"#ff0000"}\NormalTok{)}
+
+\CommentTok{# plot the chart}
+\NormalTok{opar <-}\StringTok{ }\KeywordTok{par}\NormalTok{(}\DataTypeTok{mai =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.75}\NormalTok{, }\FloatTok{3.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{omi =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{1.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{mgp =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{,}
+    \FloatTok{0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{), }\DataTypeTok{fg =} \StringTok{"black"}\NormalTok{, }\DataTypeTok{cex.main =} \DecValTok{2}\NormalTok{, }\DataTypeTok{cex.lab =} \FloatTok{1.5}\NormalTok{, }\DataTypeTok{col =} \NormalTok{plos.color,}
+    \DataTypeTok{col.main =} \NormalTok{plos.color, }\DataTypeTok{col.lab =} \NormalTok{plos.color, }\DataTypeTok{xaxs =} \StringTok{"i"}\NormalTok{, }\DataTypeTok{yaxs =} \StringTok{"i"}\NormalTok{)}
+
+\NormalTok{venn.plot <-}\StringTok{ }\KeywordTok{draw.triple.venn}\NormalTok{(}\DataTypeTok{area1 =} \NormalTok{rows, }\DataTypeTok{area2 =} \NormalTok{summary[}\DecValTok{1}\NormalTok{], }\DataTypeTok{area3 =} \NormalTok{summary[}\DecValTok{2}\NormalTok{]/}\DecValTok{2}\NormalTok{,}
+    \DataTypeTok{n12 =} \NormalTok{summary[}\DecValTok{1}\NormalTok{], }\DataTypeTok{n23 =} \NormalTok{summary[}\DecValTok{3}\NormalTok{], }\DataTypeTok{n13 =} \NormalTok{summary[}\DecValTok{2}\NormalTok{]/}\DecValTok{2}\NormalTok{, }\DataTypeTok{n123 =} \NormalTok{summary[}\DecValTok{3}\NormalTok{],}
+    \DataTypeTok{euler.d =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{scaled =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{fill =} \NormalTok{plos.colors, }\DataTypeTok{cex =} \DecValTok{2}\NormalTok{, }\DataTypeTok{fontfamily =} \KeywordTok{rep}\NormalTok{(}\StringTok{"sans"}\NormalTok{,}
+        \DecValTok{7}\NormalTok{))}
+
+\KeywordTok{par}\NormalTok{(opar)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics{/images/2013-12-11_figure_5.svg}
+\caption{\textbf{Figure 5. PLOS Biology articles: sites of
+recommendation and discussion.} Number of \emph{PLOS Biology} research
+articles published up to May 20, 2013 that have been recommended by
+F1000Prime (red) or mentioned in Wikipedia (blue).}
+\end{figure}
+
+With the increasing availability of ALM data, there comes a growing need
+to provide tools that will allow the community to interrogate them. A
+good first step for researchers, research administrators, and others
+interested in looking at the metrics of a larger set of PLOS articles is
+the recently launched ALM Reports tool {[}@ALM2013{]}. There are also a
+growing number of service providers, including Altmetric.com
+{[}@Altmetric2013{]}, ImpactStory {[}@Impactstory2013{]}, and Plum
+Analytics {[}@Plum2013{]} that provide similar services for articles
+from other publishers.
+
+As article-level metrics become increasingly used by publishers,
+funders, universities, and researchers, one of the major challenges to
+overcome is ensuring that standards and best practices are widely
+adopted and understood. The National Information Standards Organization
+(NISO) was recently awarded a grant by the Alfred P. Sloan Foundation to
+work on this {[}@NISO2013{]}, and PLOS is actively involved in this
+project. We look forward to further developing our article-level metrics
+and to having them adopted by other publishers, which hopefully will
+pave the way to their wide incorporation into research and researcher
+assessments.
+
+\subsubsection{Supporting Information}\label{supporting-information}
+
+\textbf{\href{http://dx.doi.org/10.1371/journal.pbio.1001687.s001}{Data
+S1}. Dataset of ALM for PLOS Biology articles used in the text, and R
+scripts that were used to produce figures.} The data were collected on
+May 20, 2013 and include all \emph{PLOS Biology} articles published up
+to that day. Data for F1000Prime were collected on August 15, 2013. All
+charts were produced with R version 3.0.0.
