@@ -314,7 +314,7 @@ function Note(s)
   s = string.gsub(s,
           '(.*)</', '%1 <a href="#fnref' .. num ..  '">&#8617;</a></')
   -- add a list item with the note to the note table.
-  table.insert(notes, '<li id="fn' .. num .. '">' .. s .. '</li>')
+  table.insert(notes, '<fn id="fn' .. num .. '">' .. s .. '</fn>')
   -- return the footnote reference, linked to the note.
   return '<a id="fnref' .. num .. '" href="#fn' .. num ..
             '"><sup>' .. num .. '</sup></a>'
@@ -333,7 +333,7 @@ function Para(s)
 end
 
 function Cite(s)
-  return s
+  return '<xref ref-type="bibr">' .. s .. '</xref>'
 end
 
 -- lev is an integer, the header level.
@@ -481,11 +481,6 @@ function Div(s, attr)
   else
     return s
   end
-end
-
-function Reference(s)
-  return s
-  --return '<ref>\n<mixed-citation>' .. s .. '</mixed-citation>\n</ref>'
 end
 
 -- The following code will produce runtime warnings when you haven't defined
