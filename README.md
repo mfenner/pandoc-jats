@@ -18,6 +18,12 @@ The metadata required for JATS can be stored in a YAML header - the same format 
     layout: post
     title: "What Can Article Level Metrics Do for You?"
     tags: [example, markdown, article-level metrics, reproducibility]
+    article:
+      type: research-article
+      publisher-id: PBIOLOGY-D-13-03338
+      doi: 10.1371/journal.pbio.1001687
+      pub-date: 2013-10-22
+      heading: Essay
     journal:
       publisher-id: plos
       publisher-name: Public Library of Science
@@ -27,18 +33,18 @@ The metadata required for JATS can be stored in a YAML header - the same format 
       title: PLoS Biology
       eissn: 1545-7885
       pissn: 1544-9173
-    article:
-      type: research-article
-      publisher-id: PBIOLOGY-D-13-03338
-      doi: 10.1371/journal.pbio.1001687
-      pub-date: 2013-10-22
-      heading: Essay
     authors:
      - surname: Fenner
        given-names: Martin
        orcid: http://orcid.org/0000-0003-1419-2405
        email: mfenner@plos.org
        corresp: true
+    copyright:
+      holder: Martin Fenner
+      year: 2013
+      text: "This is an open-access article distributed under the terms of the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited."
+      type: open-access
+      link: http://creativecommons.org/licenses/by/3.0/
     ---
 
 ### Validation

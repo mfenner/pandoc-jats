@@ -82,15 +82,7 @@ function Doc(body, metadata, variables)
     body = string.sub(body, 1, offset - 1)
   end
 
-  article = metadata['article'] or {}
-  journal = metadata['journal'] or {}
-
   body = '<sec>\n<title/>' .. body .. '</sec>\n'
-
-  add('<?xml version="1.0" encoding="UTF-8"?>')
-  add('<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.0/JATS-journalpublishing1.dtd">')
-  add('<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" article-type="' ..
-    (article['type'] or '') .. '" dtd-version="1.0">')
 
   add(front(metadata))
 
@@ -107,6 +99,9 @@ function front(metadata)
     table.insert(buffer, s)
   end
 
+  article = metadata['article'] or {}
+  journal = metadata['journal'] or {}
+
   -- variables required for validation
   if not (article['publisher-id'] or article['doi'] or article['pmid'] or article['pmcid'] or article['art-access-id']) then
     article['art-access-id'] = ''
@@ -118,7 +113,7 @@ function front(metadata)
   if not journal['title'] then journal['title'] = '' end
 
   -- defaults
-  article['type'] = article['type'] or 'other'
+  article['type'] = article['type'] or 'research-article'
   article['heading'] = article['heading'] or 'Other'
   article['elocation-id'] = article['elocation-id'] or article['doi'] or 'Other'
 
@@ -126,6 +121,11 @@ function front(metadata)
   if not (article['pub-date'] and string.len(article['pub-date']) == 10) then
     article['pub-date'] = os.date('%Y-%m-%d')
   end
+
+  add('<?xml version="1.0" encoding="UTF-8"?>')
+  add('<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.0/JATS-journalpublishing1.dtd">')
+  add('<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" article-type="' ..
+    article['type'] .. '" dtd-version="1.0">')
 
   add('<front>')
 
@@ -225,7 +225,54 @@ function front(metadata)
   add('<year>' .. string.sub(article['pub-date'], 1, 4) .. '</year>')
   add('</pub-date>')
 
+  if article['volume'] then add('<volume>' .. article['volume'] .. '</volume>') end
+  if article['issue'] then add('<issue>' .. article['issue'] .. '</issue>') end
+  if article['fpage'] then add('<fpage>' .. article['fpage'] .. '</fpage>') end
+  if article['lpage'] then add('<lpage>' .. article['lpage'] .. '</lpage>') end
   add('<elocation-id>' .. article['elocation-id'] .. '</elocation-id>')
+
+  if (article['received-date'] or article['accepted-date']) then
+    add('<history>')
+    if (article['received-date'] and string.len(article['received-date']) == 10) then
+      add('<date date-type="received" iso-8601-date="' .. article['received-date'] .. '">')
+      add('<day>' .. string.sub(article['received-date'], 9, 10) .. '</day>')
+      add('<month>' .. string.sub(article['received-date'], 6, 7) .. '</month>')
+      add('<year>' .. string.sub(article['received-date'], 1, 4) .. '</year>')
+      add('</pub-date>')
+    end
+    if (article['accepted-date'] and string.len(article['accepted-date']) == 10) then
+      add('<date date-type="accepted" iso-8601-date="' .. article['accepted-date'] .. '">')
+      add('<day>' .. string.sub(article['accepted-date'], 9, 10) .. '</day>')
+      add('<month>' .. string.sub(article['accepted-date'], 6, 7) .. '</month>')
+      add('<year>' .. string.sub(article['accepted-date'], 1, 4) .. '</year>')
+      add('</pub-date>')
+    end
+    add('</history>')
+  end
+
+  if metadata['copyright'] then
+    add('<permissions>')
+    if metadata['copyright']['statement'] then add('<copyright-statement>' ..
+      metadata['copyright']['statement'] .. '</copyright-statement>') end
+    if metadata['copyright']['year'] then add('<copyright-year>' ..
+      metadata['copyright']['year'] .. '</copyright-year>') end
+    if metadata['copyright']['holder'] then add('<copyright-holder>' ..
+      metadata['copyright']['holder'] .. '</copyright-holder>') end
+    if metadata['copyright']['text'] then
+      add('<license' .. (metadata['copyright']['type'] and ' license-type="' .. metadata['copyright']['type'] .. '"' or '') ..
+        (metadata['copyright']['link'] and ' xlink:href="' .. metadata['copyright']['link'] .. '"' or '') .. '>' ..
+        '<license-p>' .. metadata['copyright']['text'] .. '</license-p></license>')
+    end
+    add('</permissions>')
+  end
+
+  if metadata['tags'] then
+    add('<kwd-group kwd-group-type="author">')
+    for _, kwd in pairs(metadata['tags']) do
+      add('<kwd>' .. kwd .. '</kwd>')
+    end
+    add('</kwd-group>')
+  end
 
   add('</article-meta>')
   add('</front>')
@@ -267,7 +314,7 @@ function Superscript(s)
 end
 
 function SmallCaps(s)
-  return s
+  return "<sc>" .. s .. "</sc>"
 end
 
 function Strikeout(s)

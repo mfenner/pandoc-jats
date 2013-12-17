@@ -23,6 +23,12 @@ authors:
    orcid: http://orcid.org/0000-0003-1419-2405
    email: mfenner@plos.org
    corresp: true
+copyright:
+  holder: Martin Fenner
+  year: 2013
+  text: "This is an open-access article distributed under the terms of the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited."
+  type: open-access
+  link: http://creativecommons.org/licenses/by/3.0/
 ---
 *Article-level metrics (ALMs) provide a wide range of metrics about the
 uptake of an individual journal article by the scientific community
