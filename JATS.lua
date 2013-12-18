@@ -10,6 +10,158 @@
 -- produce informative error messages if your code contains
 -- syntax errors.
 
+
+-- Lua XML Builder
+-- An easy-to-use XML generation library
+--
+-- Author: Evan Wies, neomantra at gmail dot com
+-- http://pastie.org/1893954
+--
+-- Small modifications by Martin Fenner
+--
+-- Usage is simple.  Create an xml_builder object with xml_builder.new()
+--
+-- Once you have the object, you can create tags simply by calling functions on the object.
+-- You may pass multiple strings, which will be included inside the tag.
+-- If the first argument is a table, it is used as attributes of the tag.
+--
+--    xm.tag()                      -- returns '<tag/>'
+--    xm.tag("value")               -- returns '<tag>value</tag>'
+--    xm.tag({foo="bar"})           -- returns '<tag foo="bar"/>'
+--    xm.tag({foo="bar"}, "value")  -- returns '<tag foo="bar">value</tag>'
+--
+-- Special directives are prepended with "__".  Currently these are just
+-- __comment and __cdata:
+--    xm.__comment("my ", "comment") -- returns "<!-- my comment -->"
+--    xm.__cdata("data")             -- returns "<[CDATA[data]]>"
+--
+-- Since the builder deals with strings, invocations are easily nested.
+-- The output is raw, not pretty-printed.
+-- In the current implementation, builder object is stateless.
+--
+--[[ EXAMPLE CODE
+xml_builder = require 'xml_builder'
+xm = xml_builder.new()
+
+print(
+    xm.html(                         -- <html>
+        xm.head(                     --   <head>
+            xm.title("History")      --     <title>History</title>
+        ),                           --   </head>
+        xm.body( { class = 'foo' },  --   <body class = "foo">
+          xm.__comment "HI",         --     <!-- HI -->
+          xm.h1("Header"),           --     <h1>Header</h1>
+          xm.div{width="100%"},      --     <div width="100%"/>
+          xm.p("paragraph")          --     <p>paragraph</p>
+        )                            --   </body>
+    )                                -- </html>
+)
+--]]
+--
+----------------------------------------------------------------------------------
+-- MIT License
+--
+-- Copyright (c) 2010 Evan Wies, neomantra at gmail dot com
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+----------------------------------------------------------------------------------
+
+local string_format = string.format
+
+local function generate_tag( tag, ... )
+    -- create attribute string
+    local tvararg = {...}
+    local attr_str = ""
+    local had_attrs = false
+    if type(tvararg[1]) == 'table' then
+        had_attrs = true
+        for attr, val in pairs(tvararg[1]) do
+            -- replace underscores with hyphens in attribute name
+            attr = attr:gsub("_", "-")
+            attr_str = string_format('%s %s="%s"', attr_str, attr, val)
+        end
+    end
+
+    -- replace underscores with hyphens in tag name
+    tag = tag:gsub("_", "-")
+
+    -- attribute-only or totally empty?
+    if #tvararg == 0 or (#tvararg == 1 and had_attrs) then
+        return ''
+    -- value is empty string
+    elseif (#tvararg == 1 or (#tvararg == 2 and had_attrs)) and tvararg[#tvararg] == '' then
+        return string_format("<%s%s/>", tag, attr_str)
+    end
+    -- create full
+    local result = string_format("<%s%s>", tag, attr_str)
+    for n, val in ipairs(tvararg) do
+        if not (n == 1 and had_attrs) then
+            result = result .. val
+        end
+    end
+    return string_format("%s</%s>", result, tag)
+end
+
+local function generate_comment( ... )
+    local comments = "<!-- "
+    for _, v in ipairs{...} do
+        comments = comments .. v
+    end
+    return comments .. " -->"
+end
+
+local function generate_cdata( ... )
+    local cdata = "<![CDATA["
+    for _, v in ipairs{...} do
+        cdata = cdata .. v
+    end
+    return cdata .. "]]>"
+end
+
+
+local xml_builder_metatable = {
+    __index = function( table, key )
+        if key == "__comment" then
+            return function( ... ) return generate_comment(...) end
+        elseif key == "__cdata" then
+            return function( ... ) return generate_cdata(...) end
+        else
+            return function( ... ) return generate_tag(key, ...) end
+        end
+    end,
+}
+
+-- the module table
+local xml_builder = {}
+
+function xml_builder.new()
+    -- the magic happens via metatables
+    -- unless it is a special directive (__instruct, __comment),
+    -- the __index metamethod returns a function which
+    local tres = {}
+    setmetatable( tres, xml_builder_metatable )
+    return tres
+end
+
+
+-- return xml_builder
+
 -- Character escaping
 local function escape(s, in_attribute)
   return s:gsub("[<>&\"']",
@@ -68,10 +220,6 @@ end
 -- One could use some kind of templating
 -- system here; this just gives you a simple standalone XML file.
 function Doc(body, metadata, variables)
-  local buffer = {}
-  local function add(s)
-    table.insert(buffer, s)
-  end
 
   -- put references into back
   local offset = string.find(body, '<ref-')
@@ -83,21 +231,6 @@ function Doc(body, metadata, variables)
   end
 
   body = '<sec>\n<title/>' .. body .. '</sec>\n'
-
-  add(front(metadata))
-
-  add('<body>' .. body .. '</body>')
-  add('<back>' .. back .. '</back>')
-
-  add('</article>')
-  return table.concat(buffer,'\n')
-end
-
-function front(metadata)
-  local buffer = {}
-  local function add(s)
-    table.insert(buffer, s)
-  end
 
   article = metadata['article'] or {}
   journal = metadata['journal'] or {}
@@ -116,168 +249,202 @@ function front(metadata)
   article['type'] = article['type'] or 'research-article'
   article['heading'] = article['heading'] or 'Other'
   article['elocation-id'] = article['elocation-id'] or article['doi'] or 'Other'
+  article['title'] = metadata['title'] or 'Other'
 
    -- use today's date if no pub-date in ISO 8601 format is given
   if not (article['pub-date'] and string.len(article['pub-date']) == 10) then
     article['pub-date'] = os.date('%Y-%m-%d')
   end
 
-  add('<?xml version="1.0" encoding="UTF-8"?>')
-  add('<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.0/JATS-journalpublishing1.dtd">')
-  add('<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" article-type="' ..
-    article['type'] .. '" dtd-version="1.0">')
+  xml = xml_builder.new()
 
-  add('<front>')
+  return xml.article({ article_type = 'research-article', dtd_version = '1.0' },
+           xml.front(
+             xml.journal_meta(
+               xml.journal_id({ journal_id_type = 'publisher-id' }, journal['publisher-id']),
+               xml.journal_id({ journal_id_type = 'nlm-ta' }, journal['nlm-ta']),
+               xml.journal_id({ journal_id_type = 'pmc' }, journal['pmc']),
+               xml.journal_title_group(
+                 xml.journal_title(journal['title'])
+               ),
+               xml.issn({ pub_type = 'ppub' }, journal['pissn']),
+               xml.issn({ pub_type = 'epub' }, journal['eissn']),
+               xml.issn_l(journal['eissn']),
+               xml.publisher(
+                 xml.publisher_name((journal['publisher-name']  or '')),
+                 xml.publisher_loc(journal['publisher-loc'])
+               )
+             ),
+             xml.article_meta(
+               xml.article_id({ pub_id_type = 'publisher-id' }, article['publisher-id']),
+               xml.article_id({ pub_id_type = 'doi' }, article['doi']),
+               xml.article_id({ pub_id_type = 'pmid' }, article['pmid']),
+               xml.article_id({ pub_id_type = 'pmcid' }, article['pmcid']),
+               xml.article_id({ pub_id_type = 'art-access-id' }, article['art-access-id'])
+             )
+           )
+         )
 
-  add('<journal-meta>')
-  if journal['publisher-id'] then
-    add('<journal-id journal-id-type="publisher-id">' .. journal['publisher-id'] .. '</journal-id>')
-  end
-  if journal['nlm-ta'] then
-    add('<journal-id journal-id-type="nlm-ta">' .. journal['nlm-ta'] .. '</journal-id>')
-  end
-  if journal['pmc'] then
-    add('<journal-id journal-id-type="pmc">' .. journal['pmc'] .. '</journal-id>')
-  end
-  add('<journal-title-group><journal-title>' .. journal['title'] .. '</journal-title></journal-title-group>')
-  if journal['pissn'] then
-    add('<issn pub-type="ppub">' .. journal['pissn'] .. '</issn>')
-  end
-  if journal['eissn'] then
-    add('<issn pub-type="epub">' .. journal['eissn'] .. '</issn>')
-    add('<issn-l>' .. journal['eissn'] .. '</issn-l>')
-  end
-  add('<publisher>')
-  add('<publisher-name>' .. (journal['publisher-name']  or '') .. '</publisher-name>')
-  if journal['publisher-loc'] then
-    add('<publisher-loc>' .. journal['publisher-loc'] .. '</publisher-loc>')
-  end
-  add('</publisher>')
-  add('</journal-meta>')
+  -- Jats = {}
 
-  add('<article-meta>')
-  if article['publisher-id'] then
-    add('<article-id pub-id-type="publisher-id">' .. article['publisher-id'] .. '</article-id>')
-  end
-  if article['doi'] then
-    add('<article-id pub-id-type="doi">' .. article['doi'] .. '</article-id>')
-  end
-  if article['pmid'] then
-    add('<article-id pub-id-type="pmid">' .. article['pmid'] .. '</article-id>')
-  end
-  if article['pmcid'] then
-    add('<article-id pub-id-type="pmcid">' .. article['pmcid'] .. '</article-id>')
-  end
-  if article['art-access-id'] then
-    add('<article-id pub-id-type="art-access-id">' .. article['art-access-id'] .. '</article-id>')
-  end
+  -- local function add_element(name, s, attr)
+  --   return s and ('  <' .. name .. (attr and (' ' .. attr) or '') .. '>' .. s .. '</' .. name .. '>\n') or ''
+  -- end
 
-  add('<article-categories>')
-  add('<subj-group subj-group-type="heading">')
-  add('<subject>' .. article['heading'] .. '</subject>')
-  add('</subj-group>')
-  if metadata['categories'] then
-    add('<subj-group subj-group-type="categories">')
-    for _, category in pairs(article['categories']) do
-      add('<subject>' .. category .. '</subject>')
-    end
-    add('</subj-group>')
-  end
-  add('</article-categories>')
+  -- local function add_category(name, s, attr)
+  --   return s and ('  <' .. name .. (attr and (' ' .. attr) or '') .. '>\n  ' .. s .. '\n  </' .. name .. '>\n') or ''
+  -- end
 
-  add('<title-group><article-title>' .. (metadata['title'] or '') .. '</article-title></title-group>')
-  if metadata['authors'] then
-    add('<contrib-group content-type="authors">')
-    for i, author in pairs(metadata['authors']) do
-      add('<contrib id="author-' .. i .. '" contrib-type="author"' ..
-        (author['corresp'] and ' corresp="yes"' or '') .. '>')
-      if author['orcid'] then
-        add('<contrib-id contrib-id-type="orcid">' .. author['orcid'] .. '</contrib-id>')
-      end
-      add('<name>')
-      add('<surname>' .. (author['surname'] or '') .. '</surname>')
-      add('<given-names>' .. (author['given-names'] or '') .. '</given-names>')
-      add('</name>')
-      add('<email>' .. (author['email'] or '') .. '</email>')
+  -- function Jats.front(journal, article)
+  --   return add_category('journal_meta', Jats.journal_meta(journal)) ..
+  --          add_category('article_meta', Jats.article_meta(article))
+  -- end
 
-      add('</contrib>')
-    end
-    add('</contrib-group>')
-  end
+  -- function Jats.journal_meta(journal)
+  --   return add_element('journal-id', journal['publisher-id'], 'journal-id-type="publisher-id"') ..
+  --          add_element('journal-id', journal['nlm-ta'], 'journal-id-type="nlm-ta"') ..
+  --          add_element('journal-id', journal['pmc'], 'journal-id-type="pmc"') ..
+  --          add_element('journal-title-group', add_element('journal-title', journal['title'])) ..
+  --          add_element('issn', journal['pissn'], 'pub-type="ppub"') ..
+  --          add_element('issn', journal['eissn'], 'pub-type="epub"') ..
+  --          add_element('issn-l', journal['eissn']) ..
+  --          add_category('publisher', Jats.publisher(journal))
+  -- end
 
-  if metadata['editors'] then
-    add('<contrib-group content-type="editors">')
-    for i, editor in pairs(metadata['editors']) do
-      add('<contrib id="editor-' .. i .. '" contrib-type="editor">')
-      add('<name>')
-      add('<surname>' .. (editor['surname'] or '') .. '</surname>')
-      add('<given-names>' .. (editor['given-names'] or '') .. '</given-names>')
-      add('</name>')
-      add('<email>' .. (editor['email'] or '') .. '</email>')
-      add('</contrib>')
-    end
-    add('</contrib-group>')
-  end
+  -- function Jats.article_meta(article, metadata)
+  --   return add_element('article-id', article['publisher-id'], 'pub-id-type="publisher-id"') ..
+  --          add_element('article-id', article['doi'], 'pub-id-type="doi"') ..
+  --          add_element('article-id', article['pmid'], 'pub-id-type="pmid"') ..
+  --          add_element('article-id', article['pmcid'], 'pub-id-type="pmcid"') ..
+  --          add_element('article-id', article['art-access-id'], 'pub-id-type="art-access-id"') ..
+  --          add_category('article-categories', Jats.article_categories(article)) ..
+  --          add_element('title-group', add_element('article-title', article['title'])) ..
+  --          -- (metadata['authors'] and add_element('contrib-group', Jats.contrib_group(metadata, 'author'), 'content-type="authors"') or '') ..
+  --          -- (metadata['editors'] and add_element('contrib-group', cJats.ontrib_group(metadata, 'editor'), 'content-type="editors"') or '') ..
+  --          add_category('pub-date', Jats.pub_date(article['pub-date']), 'pub-type="epub" date-type="pub" iso-8601-date="' .. article['pub-date'] .. '"') ..
+  --          add_element('volume', article['volume']) ..
+  --          add_element('issue', article['issue']) ..
+  --          add_element('fpage', article['fpage']) ..
+  --          add_element('lpage', article['lpage']) ..
+  --          add_element('elocation-id', article['elocation-id'])
+  --          -- ((article['received-date'] or article['accepted-date']) and add_element('history', Jats.history(article)))
+  --          -- (metadata['copyright'] and add_element('permissions', Jats.permissions(metadata)) or '') ..
+  --          -- (metadata['tags'] and add_element('kwd-group', Jats.kwd_group, 'kwd-group-type="author"') or '')
+  -- end
 
-  add('<pub-date pub-type="epub" date-type="pub" iso-8601-date="' .. article['pub-date'] .. '">')
-  add('<day>' .. string.sub(article['pub-date'], 9, 10) .. '</day>')
-  add('<month>' .. string.sub(article['pub-date'], 6, 7) .. '</month>')
-  add('<year>' .. string.sub(article['pub-date'], 1, 4) .. '</year>')
-  add('</pub-date>')
+  -- function Jats.publisher(journal)
+  --   return add_element('publisher-name', (journal['publisher-name']  or '')) ..
+  --          add_element('publisher-loc', journal['publisher-loc'])
+  -- end
 
-  if article['volume'] then add('<volume>' .. article['volume'] .. '</volume>') end
-  if article['issue'] then add('<issue>' .. article['issue'] .. '</issue>') end
-  if article['fpage'] then add('<fpage>' .. article['fpage'] .. '</fpage>') end
-  if article['lpage'] then add('<lpage>' .. article['lpage'] .. '</lpage>') end
-  add('<elocation-id>' .. article['elocation-id'] .. '</elocation-id>')
+  -- function Jats.article_categories(article)
+  --   return add_category('subj-group', Jats.subject(article['heading']), 'subj-group-type="heading"') ..
+  --         (article['categories'] and add_category('subj-group', Jats.categories(article), 'subj-group-type="categories"') or '')
+  -- end
 
-  if (article['received-date'] or article['accepted-date']) then
-    add('<history>')
-    if (article['received-date'] and string.len(article['received-date']) == 10) then
-      add('<date date-type="received" iso-8601-date="' .. article['received-date'] .. '">')
-      add('<day>' .. string.sub(article['received-date'], 9, 10) .. '</day>')
-      add('<month>' .. string.sub(article['received-date'], 6, 7) .. '</month>')
-      add('<year>' .. string.sub(article['received-date'], 1, 4) .. '</year>')
-      add('</pub-date>')
-    end
-    if (article['accepted-date'] and string.len(article['accepted-date']) == 10) then
-      add('<date date-type="accepted" iso-8601-date="' .. article['accepted-date'] .. '">')
-      add('<day>' .. string.sub(article['accepted-date'], 9, 10) .. '</day>')
-      add('<month>' .. string.sub(article['accepted-date'], 6, 7) .. '</month>')
-      add('<year>' .. string.sub(article['accepted-date'], 1, 4) .. '</year>')
-      add('</pub-date>')
-    end
-    add('</history>')
-  end
+  -- function Jats.contrib_group(metadata, role)
+  --   s = ''
+  --   for i, author in pairs(metadata[role .. 's']) do
+  --     s = s .. add_category('contrib', Jats.contrib(author), 'id="author-' .. i .. '" contrib-type="author"' .. (author['corresp'] and ' corresp="yes"' or ''))
+  --   end
+  --   return s
+  -- end
 
-  if metadata['copyright'] then
-    add('<permissions>')
-    if metadata['copyright']['statement'] then add('<copyright-statement>' ..
-      metadata['copyright']['statement'] .. '</copyright-statement>') end
-    if metadata['copyright']['year'] then add('<copyright-year>' ..
-      metadata['copyright']['year'] .. '</copyright-year>') end
-    if metadata['copyright']['holder'] then add('<copyright-holder>' ..
-      metadata['copyright']['holder'] .. '</copyright-holder>') end
-    if metadata['copyright']['text'] then
-      add('<license' .. (metadata['copyright']['type'] and ' license-type="' .. metadata['copyright']['type'] .. '"' or '') ..
-        (metadata['copyright']['link'] and ' xlink:href="' .. metadata['copyright']['link'] .. '"' or '') .. '>' ..
-        '<license-p>' .. metadata['copyright']['text'] .. '</license-p></license>')
-    end
-    add('</permissions>')
-  end
+  -- function Jats.pub_date(date, label)
+  --   return add_element('day', string.sub(date, 9, 10)) ..
+  --          add_element('month', string.sub(date, 6, 7))..
+  --          add_element('year', string.sub(date, 1, 4))
+  -- end
 
-  if metadata['tags'] then
-    add('<kwd-group kwd-group-type="author">')
-    for _, kwd in pairs(metadata['tags']) do
-      add('<kwd>' .. kwd .. '</kwd>')
-    end
-    add('</kwd-group>')
-  end
+  -- function Jats.permissions(metadata)
+  --   return add_element('copyright-statement', metadata['copyright']['statement']) ..
+  --          add_element('copyright-year', metadata['copyright']['year']) ..
+  --          add_element('copyright-holder', metadata['copyright']['holder']) ..
+  --          add_category('license', Jats.copyright_text(metadata))
+  -- end
 
-  add('</article-meta>')
-  add('</front>')
+  -- function Jats.history(article)
+  --   return ((article['received-date'] and string.len(article['received-date']) == 10) and Jats.pub_date(article['received-date'], 'received') or '') ..
+  --          ((article['accepted-date'] and string.len(article['accepted-date']) == 10) and Jats.pub_date(article['accepted-date'], 'accepted') or '')
+  -- end
 
-  return table.concat(buffer,'\n')
+  -- function Jats.kwd_group(metadata)
+  --   s = ''
+  --   for _, kwd in pairs(metadata['tags']) do
+  --     s = s .. add_element('kwd', kwd)
+  --   end
+  --   return s
+  -- end
+
+  -- function Jats.contrib(author)
+  --   return add_element('contrib-id', author['orcid'], 'contrib-id-type="orcid"') ..
+  --          add_element('name', Jats.names(author)) ..
+  --          add_element('email', author['email'])
+  -- end
+
+  -- function Jats.names(author)
+  --   return add_element('surname', author['surname']) ..
+  --          add_element('given-names', author['given-names'])
+  -- end
+
+  -- function Jats.subject(text)
+  --   return add_element('subject', text)
+  -- end
+
+  -- function Jats.categories(article)
+  --   s = ''
+  --   for _, category in pairs(article['categories']) do
+  --     s = s .. Jats.subject(category)
+  --   end
+  -- end
+
+  -- function Jats.copyright_text(metadata)
+  --   return add_element('license', add_element('license-p', metadata['copyright']['text']), (metadata['copyright']['type'] and ' license-type="' .. metadata['copyright']['type'] .. '"' or '') .. (metadata['copyright']['link'] and ' xlink:href="' .. metadata['copyright']['link'] .. '"' or ''))
+  -- end
+
+  -- -- put references into back
+  -- local offset = string.find(body, '<ref-')
+  -- if (offset == nil) then
+  --   back = ''
+  -- else
+  --   back = string.sub(body, offset)
+  --   body = string.sub(body, 1, offset - 1)
+  -- end
+
+  -- body = '<sec>\n<title/>' .. body .. '</sec>\n'
+
+  -- article = metadata['article'] or {}
+  -- journal = metadata['journal'] or {}
+
+  -- -- variables required for validation
+  -- if not (article['publisher-id'] or article['doi'] or article['pmid'] or article['pmcid'] or article['art-access-id']) then
+  --   article['art-access-id'] = ''
+  -- end
+  -- if not (journal['pissn'] or journal['eissn']) then journal['eissn'] = '' end
+  -- if not (journal['publisher-id'] or journal['nlm-ta'] or journal['pmc']) then
+  --   journal['publisher-id'] = ''
+  -- end
+  -- if not journal['title'] then journal['title'] = '' end
+
+  -- -- defaults
+  -- article['type'] = article['type'] or 'research-article'
+  -- article['heading'] = article['heading'] or 'Other'
+  -- article['elocation-id'] = article['elocation-id'] or article['doi'] or 'Other'
+  -- article['title'] = metadata['title'] or 'Other'
+
+  --  -- use today's date if no pub-date in ISO 8601 format is given
+  -- if not (article['pub-date'] and string.len(article['pub-date']) == 10) then
+  --   article['pub-date'] = os.date('%Y-%m-%d')
+  -- end
+
+  -- return '<?xml version="1.0" encoding="UTF-8"?>' ..
+  --        '<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "http://jats.nlm.nih.gov/publishing/1.0/JATS-journalpublishing1.dtd">' ..
+  --        '<article xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" article-type="' ..
+  --        article['type'] .. '" dtd-version="1.0">' ..
+  --        add_element('front', Jats.front(journal, article)) ..
+  --        add_element('body', body) ..
+  --        add_element('back', back) ..
+  --        '</article>'
 end
 
 -- The functions that follow render corresponding pandoc elements.
@@ -528,6 +695,10 @@ function Div(s, attr)
   else
     return s
   end
+end
+
+function indent(number)
+  return string.rep(' ', number)
 end
 
 -- The following code will produce runtime warnings when you haven't defined
