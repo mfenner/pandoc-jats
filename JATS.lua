@@ -93,11 +93,17 @@ local function generate_tags( tag, ... )
   local s = ''
   if type(tvararg[1]) == 'table' then
     for i, v in ipairs(tvararg[1]) do
-      -- if nested elements
       if tvararg[2] == nil then
         s = s .. generate_tag(tag, v)
       else
-        print (tvararg[2])
+        s = s .. generate_tag('contrib', { contrib_type = "author" },
+          generate_tag('contrib_id', { contrib_id_type = 'orcid' }, v['orcid']),
+          generate_tag('name',
+            generate_tag('surname', v['surname']),
+            generate_tag('given_names', v['given-names'])
+          ),
+          generate_tag('email', v['email'])
+        )
       end
     end
   end
@@ -222,6 +228,7 @@ function Doc(body, metadata, variables)
 
   article = metadata['article'] or {}
   journal = metadata['journal'] or {}
+  copyright = metadata['copyright'] or {}
 
   -- variables required for validation
   if not (article['publisher-id'] or article['doi'] or article['pmid'] or article['pmcid'] or article['art-access-id']) then
@@ -270,24 +277,24 @@ function Doc(body, metadata, variables)
                xml.article_id({ pub_id_type = 'pmcid' }, article['pmcid']),
                xml.article_id({ pub_id_type = 'art-access-id' }, article['art-access-id']),
                xml.article_categories(
-                 xml.sub_group({ subj_group_type = 'heading' },
+                 xml.subj_group({ subj_group_type = 'heading' },
                    xml.subject(article['heading'])
                    ),
-                 xml.sub_group({ subj_group_type = 'categories' },
+                 xml.subj_group({ subj_group_type = 'categories' },
                    xml.subject_pairs(article['categories'])
                  )
                ),
                xml.title_group(
-                 xml.title(article['title'])
+                 xml.article_title(article['title'])
                ),
                xml.contrib_group(
                  xml.contrib_pairs(metadata['contributors'],
-                   -- xml.name(
-                   --   xml.surname('surname'),
-                   --   xml.given_names('given_names')
-                   -- ),
-                   xml.email('email'),
-                   xml.orcid('orcid')
+                   xml.contrib_id(),
+                   xml.name(
+                     xml.surname(),
+                     xml.given_names()
+                   ),
+                   xml.email()
                  )
                ),
                xml.pub_date({ pub_type = 'epub', iso_8601_date = article['pub-date'] },
@@ -313,11 +320,11 @@ function Doc(body, metadata, variables)
                  )
                ),
                xml.permissions(
-                 xml.copyright_statement(metadata['copyright']['statement']),
-                 xml.copyright_year(metadata['copyright']['year']),
-                 xml.copyright_holder(metadata['copyright']['holder']),
-                 xml.license({ license_type = metadata['copyright']['type'], xlink__href = metadata['copyright']['link'] },
-                   xml.license_p(metadata['copyright']['text'])
+                 xml.copyright_statement(copyright['statement']),
+                 xml.copyright_year(copyright['year']),
+                 xml.copyright_holder(copyright['holder']),
+                 xml.license({ license_type = copyright['type'], xlink__href = copyright['link'] },
+                   xml.license_p(copyright['text'])
                  )
                ),
                xml.kwd_group({ kwd_group_type = 'author' },
@@ -328,18 +335,6 @@ function Doc(body, metadata, variables)
            xml.body(body),
            xml.back(back)
          )
-
-  --          -- (metadata['authors'] and add_element('contrib-group', Jats.contrib_group(metadata, 'author'), 'content-type="authors"') or '') ..
-  --          -- (metadata['editors'] and add_element('contrib-group', cJats.ontrib_group(metadata, 'editor'), 'content-type="editors"') or '') ..
-
-  -- function Jats.contrib_group(metadata, role)
-  --   s = ''
-  --   for i, author in pairs(metadata[role .. 's']) do
-  --     s = s .. add_category('contrib', Jats.contrib(author), 'id="author-' .. i .. '" contrib-type="author"' .. (author['corresp'] and ' corresp="yes"' or ''))
-  --   end
-  --   return s
-  -- end
-
 end
 
 -- The functions that follow render corresponding pandoc elements.
