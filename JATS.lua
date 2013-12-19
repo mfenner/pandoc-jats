@@ -96,7 +96,7 @@ local function generate_tags( tag, ... )
       if tvararg[2] == nil then
         s = s .. generate_tag(tag, v)
       else
-        s = s .. generate_tag('contrib', { contrib_type = "author" },
+        s = s .. generate_tag('contrib', { contrib_type = v['type'] or 'author' },
           generate_tag('contrib_id', { contrib_id_type = 'orcid' }, v['orcid']),
           generate_tag('name',
             generate_tag('surname', v['surname']),

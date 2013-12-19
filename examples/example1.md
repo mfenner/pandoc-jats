@@ -22,8 +22,7 @@ contributors:
    given-names: Martin
    orcid: http://orcid.org/0000-0003-1419-2405
    email: mfenner@plos.org
-   type: author
-   corresp: true
+   corresp: yes
 copyright:
   holder: Martin Fenner
   year: 2013

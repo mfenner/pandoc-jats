@@ -2,7 +2,7 @@
 layout: post
 title: "Nine simple ways to make it easier to (re)use your data"
 tags: [example, citation]
-authors:
+contributors:
  - surname: White
    given-names: Ethan P.
    orcid: http://orcid.org/0000-0001-6728-7745
