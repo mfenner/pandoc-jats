@@ -12,15 +12,12 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
-
 -- Includes a modified version of Lua XML Builder by Evan Wies 2010
 -- An easy-to-use XML generation library
 -- Released under the MIT license
 -- http://pastie.org/1893954
 
-local string_format = string.format
-
-local function generate_tag( tag, ... )
+function generate_tag( tag, ... )
   -- create attribute string
   local tvararg = {...}
   local attr_str = ""
@@ -34,7 +31,7 @@ local function generate_tag( tag, ... )
       -- replace underscores with hyphens in attribute name
       attr = attr:gsub("_", "-")
 
-      attr_str = string_format('%s %s="%s"', attr_str, attr, val)
+      attr_str = string.format('%s %s="%s"', attr_str, attr, val)
     end
   end
 
@@ -46,10 +43,10 @@ local function generate_tag( tag, ... )
     return ''
   -- value is empty string
   elseif (#tvararg == 1 or (#tvararg == 2 and had_attrs)) and tvararg[#tvararg] == '' then
-    return string_format("<%s%s/>", tag, attr_str)
+    return string.format("<%s%s/>", tag, attr_str)
   end
   -- create full
-  local result = string_format("<%s%s>", tag, attr_str)
+  local result = string.format("<%s%s>", tag, attr_str)
 
   -- add declaration if root tag
   if tag == 'article' then
@@ -62,7 +59,7 @@ local function generate_tag( tag, ... )
       result = result .. val
     end
   end
-  return string_format("%s</%s>", result, tag)
+  return string.format("%s</%s>", result, tag)
 end
 
 -- tag names ending with '_pairs' contain multiple elements
@@ -111,8 +108,8 @@ local xml_builder_metatable = {
       return function( ... ) return generate_comment(...) end
     elseif key == "__cdata" then
       return function( ... ) return generate_cdata(...) end
-    elseif string.sub(key, -6) == '_pairs' then
-      key = string.sub(key, 1, -7)
+    elseif key:sub(-6) == '_pairs' then
+      key = key:sub(1, -7)
       return function( ... ) return generate_tags(key, ...) end
     else
       return function( ... ) return generate_tag(key, ...) end
@@ -125,8 +122,8 @@ local xml_builder = {}
 
 function xml_builder.new( ... )
   -- the magic happens via metatables
-  -- unless it is a special directive (__instruct, __comment),
-  -- the __index metamethod returns a function which
+  -- unless it is a special directive (__comment, __cdata),
+  -- the __index metamethod returns the generate_tag method
   local tres = {}
   setmetatable( tres, xml_builder_metatable )
   return tres
@@ -134,33 +131,19 @@ end
 
 -- end XML Builder library
 
--- Character escaping
-local function escape(s, in_attribute)
-  return s:gsub("[<>&\"']",
-    function(x)
-      if x == '<' then
-        return '&lt;'
-      elseif x == '>' then
-        return '&gt;'
-      elseif x == '&' then
-        return '&amp;'
-      elseif x == '"' then
-        return '&quot;'
-      elseif x == "'" then
-        return '&#39;'
-      else
-        return x
-      end
-    end)
+-- XML character entity escaping
+function escape(s)
+  local map = { ['<'] = '&lt;', ['>'] = '&gt;', ['&'] = '&amp;', ['"'] = '&quot;', ["'"]= '&#39;' }
+  return s:gsub("[<>&\"']", function(x) return map[x] end)
 end
 
 -- Helper function to convert an attributes table into
--- a string that can be put into HTML tags.
+-- a string that can be put into XML elements.
 local function attributes(attr)
   local attr_table = {}
   for x,y in pairs(attr) do
     if y and y ~= "" then
-      table.insert(attr_table, ' ' .. x .. '="' .. escape(y,true) .. '"')
+      table.insert(attr_table, string.format(' %s="%s"', x, escape(y)))
     end
   end
   return table.concat(attr_table)
@@ -179,30 +162,50 @@ local function pipe(cmd, inp)
   return result
 end
 
+-- Convert pandoc alignment to something HTML can use.
+-- align is AlignLeft, AlignRight, AlignCenter, or AlignDefault.
+function html_align(align)
+  if align == 'AlignRight' then
+    return 'right'
+  elseif align == 'AlignCenter' then
+    return 'center'
+  else
+    return 'left'
+  end
+end
+
+-- The following code will produce runtime warnings when you haven't defined
+-- all of the functions you need for the custom writer, so it's useful
+-- to include when you're working on a writer.
+local meta = {}
+meta.__index =
+  function(_, key)
+    io.stderr:write(string.format("WARNING: Undefined function '%s'\n",key))
+    return function() return "" end
+  end
+setmetatable(_G, meta)
+
 -- Table to store footnotes, so they can be included at the end.
 local notes = {}
 
--- Blocksep is used to separate block elements.
-function Blocksep()
-  return "\n\n"
-end
-
 -- This function is called once for the whole document. Parameters:
 -- body is a string, metadata is a table, variables is a table.
--- One could use some kind of templating
--- system here; this just gives you a simple standalone XML file.
 function Doc(body, metadata, variables)
-
+  -- for _,values in pairs(variables) do
+  --   for key,value in pairs(values) do
+  --     print(key,value)
+  --   end
+  -- end
   -- put references into back
-  local offset = string.find(body, '<ref-')
+  local offset = body:find('<ref-')
   if (offset == nil) then
     back = ''
   else
-    back = string.sub(body, offset)
-    body = string.sub(body, 1, offset - 1)
+    back = body:sub(offset)
+    body = body:sub(1, offset - 1)
   end
 
-  body = '<sec>\n<title/>' .. body .. '</sec>\n'
+  body = string.format('<sec>\n<title/>%s</sec>\n', body)
 
   article = metadata['article'] or {}
   journal = metadata['journal'] or {}
@@ -315,58 +318,21 @@ function Doc(body, metadata, variables)
          )
 end
 
+-- Blocksep is used to separate block elements.
+function Blocksep()
+  return "\n\n"
+end
+
 -- The functions that follow render corresponding pandoc elements.
 -- s is always a string, attr is always a table of attributes, and
 -- items is always an array of strings (the items in a list).
 -- Comments indicate the types of other variables.
+-- Defined at https://github.com/jgm/pandoc/blob/master/src/Text/Pandoc/Writers/Custom.hs
 
-function Str(s)
-  return escape(s)
-end
+-- block elements
 
-function Space()
-  return " "
-end
-
-function LineBreak()
-  return "<br/>"
-end
-
-function Emph(s)
-  return "<italic>" .. s .. "</italic>"
-end
-
-function Strong(s)
-  return "<bold>" .. s .. "</bold>"
-end
-
-function Subscript(s)
-  return "<sub>" .. s .. "</sub>"
-end
-
-function Superscript(s)
-  return "<sup>" .. s .. "</sup>"
-end
-
-function SmallCaps(s)
-  return "<sc>" .. s .. "</sc>"
-end
-
-function Strikeout(s)
-  return '<strike>' .. s .. '</strike>'
-end
-
-function Link(s, src, tit)
-  return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src,true) .. '" xlink:type="simple">' .. s .. '</ext-link>'
-end
-
-function Image(src, tit, s)
-  -- if s begins with <bold> text, make it the <title>
-  s = string.gsub('<p>' .. s, "^<bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
-  return '<fig>\n' ..
-         '<caption>\n' .. s .. '</p>\n</caption>\n' ..
-         "<graphic mimetype='image' xlink:href='".. escape(src,true) .. "' xlink:type='simple'/>\n" ..
-         '</fig>'
+function Plain(s)
+  return s
 end
 
 function CaptionedImage(src, tit, s)
@@ -374,48 +340,21 @@ function CaptionedImage(src, tit, s)
   s = string.gsub('<p>' .. s, "^<p><bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
   return '<fig>\n' ..
          '<caption>\n' .. s .. '</p>\n</caption>\n' ..
-         "<graphic mimetype='image' xlink:href='".. escape(src,true) .. "' xlink:type='simple'/>\n" ..
+         "<graphic mimetype='image' xlink:href='".. escape(src) .. "' xlink:type='simple'/>\n" ..
          '</fig>'
-end
-
-function Code(s, attr)
-  return "<preformat>" .. escape(s) .. "</preformat>"
-end
-
-function InlineMath(s)
-  return '<inline-formula>' .. escape(s) .. '</inline-formula>'
-end
-
-function DisplayMath(s)
-  return '<disp-formula>' .. escape(s) .. '</disp-formula>'
-end
-
-function Note(s)
-  local num = #notes + 1
-  -- insert the back reference right before the final closing tag.
-  s = string.gsub(s,
-          '(.*)</', '%1 <a href="#fnref' .. num ..  '">&#8617;</a></')
-  -- add a list item with the note to the note table.
-  table.insert(notes, '<fn id="fn' .. num .. '">' .. s .. '</fn>')
-  -- return the footnote reference, linked to the note.
-  return '<a id="fnref' .. num .. '" href="#fn' .. num ..
-            '"><sup>' .. num .. '</sup></a>'
-end
-
-function Span(s, attr)
-  return s
-end
-
-function Plain(s)
-  return s
 end
 
 function Para(s)
   return "<p>" .. s .. "</p>"
 end
 
-function Cite(s)
-  return '<xref ref-type="bibr">' .. s .. '</xref>'
+function RawBlock(s)
+  return "<preformat>" .. s .. "</preformat>"
+end
+
+-- JATS restricts use to inside table cells (<td> and <th>)
+function HorizontalRule()
+  return "<hr/>"
 end
 
 -- lev is an integer, the header level.
@@ -431,15 +370,6 @@ function Header(lev, s, attr)
   end
 end
 
-function BlockQuote(s)
-  return "<boxed-text>\n" .. s .. "\n</boxed-text>"
-end
-
--- Should be restricted to use inside table cells (<td> and <th>)
-function HorizontalRule()
-  return "<hr/>"
-end
-
 function CodeBlock(s, attr)
   -- If code block has class 'dot', pipe the contents through dot
   -- and base64, and include the base64-encoded png as a data: URL.
@@ -452,54 +382,8 @@ function CodeBlock(s, attr)
   end
 end
 
-function BulletList(items)
-  local buffer = {}
-  for _, item in pairs(items) do
-    table.insert(buffer, "<list-item><p>" .. item .. "</p></list-item>")
-  end
-  return '<list list-type="bullet">\n' .. table.concat(buffer, "\n") .. '\n</list>'
-end
-
-function OrderedList(items)
-  local buffer = {}
-  for _, item in pairs(items) do
-    table.insert(buffer, "<list-item><p>" .. item .. "</p></list-item>")
-  end
-  return '<list list-type="order">\n' .. table.concat(buffer, "\n") .. '\n</list>'
-end
-
--- Revisit association list STackValue instance.
-function DefinitionList(items)
-  local buffer = {}
-  for _,item in pairs(items) do
-    for k, v in pairs(item) do
-      table.insert(buffer,"<def-item>\n<term>" .. k .. "</term>\n<def>" ..
-                        table.concat(v,"</def>\n<def>") .. "</def>\n</def-item>")
-    end
-  end
-  return "<def-list>\n" .. table.concat(buffer, "\n") .. "\n</def-list>"
-end
-
-function SingleQuoted(s)
-  return "'" .. s .. "'"
-end
-
-function DoubleQuoted(s)
-  return '"' .. s .. '"'
-end
-
--- Convert pandoc alignment to something HTML can use.
--- align is AlignLeft, AlignRight, AlignCenter, or AlignDefault.
-function html_align(align)
-  if align == 'AlignLeft' then
-    return 'left'
-  elseif align == 'AlignRight' then
-    return 'right'
-  elseif align == 'AlignCenter' then
-    return 'center'
-  else
-    return 'left'
-  end
+function BlockQuote(s)
+  return "<boxed-text>\n" .. s .. "\n</boxed-text>"
 end
 
 -- Caption is a string, aligns is an array of strings,
@@ -510,7 +394,7 @@ function Table(caption, aligns, widths, headers, rows)
   local function add(s)
     table.insert(buffer, s)
   end
-  add("<table-wrap>\n")
+  table.insert(buffer, '<table-wrap>\n')
   if caption ~= "" then
     -- if caption begins with <bold> text, make it the <title>
     caption = string.gsub('<p>' .. caption, "^<p><bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
@@ -542,7 +426,7 @@ function Table(caption, aligns, widths, headers, rows)
     add('<tr>')
     for i,c in pairs(row) do
       -- remove <p> tag
-      c = string.gsub(c, "^<p>(.-)</p>", "%1")
+      c = c:gsub("^<p>(.-)</p>", "%1")
       add('<td align="' .. html_align(aligns[i]) .. '">' .. c .. '</td>')
     end
     add('</tr>')
@@ -551,11 +435,39 @@ function Table(caption, aligns, widths, headers, rows)
   return table.concat(buffer,'\n')
 end
 
+function BulletList(items)
+  local buffer = {}
+  for _, item in pairs(items) do
+    table.insert(buffer, '<list-item><p>' .. item .. '</p></list-item>')
+  end
+  return '<list list-type="bullet">\n' .. table.concat(buffer, '\n') .. '\n</list>'
+end
+
+function OrderedList(items)
+  local buffer = {}
+  for _, item in pairs(items) do
+    table.insert(buffer, '<list-item><p>' .. item .. '</p></list-item>')
+  end
+  return '<list list-type="order">\n' .. table.concat(buffer, '\n') .. '\n</list>'
+end
+
+-- Revisit association list STackValue instance.
+function DefinitionList(items)
+  local buffer = {}
+  for _,item in pairs(items) do
+    for k, v in pairs(item) do
+      table.insert(buffer, '<def-item>\n<term>' .. k .. '</term>\n<def>' ..
+                        table.concat(v,'</def>\n<def>') .. '</def>\n</def-item>')
+    end
+  end
+  return '<def-list>\n' .. table.concat(buffer, '\n') .. '\n</def-list>'
+end
+
 function Div(s, attr)
   -- parse references
   if attr.class and string.match(' ' .. attr.class .. ' ',' references ') then
     local i = 0
-    s = string.gsub(s, "<p>(.-)</p>", function (c)
+    s = s:gsub("<p>(.-)</p>", function (c)
           i = i + 1
           return '<ref id="ref-' .. i .. '">\n<mixed-citation>' .. c .. '</mixed-citation>\n</ref>'
         end)
@@ -565,13 +477,96 @@ function Div(s, attr)
   end
 end
 
--- The following code will produce runtime warnings when you haven't defined
--- all of the functions you need for the custom writer, so it's useful
--- to include when you're working on a writer.
-local meta = {}
-meta.__index =
-  function(_, key)
-    io.stderr:write(string.format("WARNING: Undefined function '%s'\n",key))
-    return function() return "" end
-  end
-setmetatable(_G, meta)
+-- inline elements
+
+function Str(s)
+  return escape(s)
+end
+
+function Space()
+  return " "
+end
+
+function Emph(s)
+  return "<italic>" .. s .. "</italic>"
+end
+
+function Strong(s)
+  return "<bold>" .. s .. "</bold>"
+end
+
+function Strikeout(s)
+  return '<strike>' .. s .. '</strike>'
+end
+
+function Superscript(s)
+  return "<sup>" .. s .. "</sup>"
+end
+
+function Subscript(s)
+  return "<sub>" .. s .. "</sub>"
+end
+
+function SmallCaps(s)
+  return "<sc>" .. s .. "</sc>"
+end
+
+function SingleQuoted(s)
+  return "'" .. s .. "'"
+end
+
+function DoubleQuoted(s)
+  return '"' .. s .. '"'
+end
+
+function Cite(s)
+  return '<xref ref-type="bibr">' .. s .. '</xref>'
+end
+
+function Code(s, attr)
+  return "<preformat>" .. escape(s) .. "</preformat>"
+end
+
+function DisplayMath(s)
+  return '<disp-formula>' .. escape(s) .. '</disp-formula>'
+end
+
+function InlineMath(s)
+  return '<inline-formula>' .. escape(s) .. '</inline-formula>'
+end
+
+function RawInline(format, s)
+  return "<preformat>" .. s .. "</preformat>"
+end
+
+function LineBreak()
+  return "<br/>"
+end
+
+function Link(s, src, tit)
+  return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
+end
+
+function Image(src, tit, s)
+  -- if s begins with <bold> text, make it the <title>
+  s = string.gsub('<p>' .. s, "^<bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
+  return '<fig>\n' ..
+         '<caption>\n' .. s .. '</p>\n</caption>\n' ..
+         "<graphic mimetype='image' xlink:href='".. escape(src) .. "' xlink:type='simple'/>\n" ..
+         '</fig>'
+end
+
+function Note(s)
+  local num = #notes + 1
+  -- insert the back reference right before the final closing tag.
+  s = s:gsub('(.*)</', '%1 <a href="#fnref' .. num ..  '">&#8617;</a></')
+  -- add a list item with the note to the note table.
+  table.insert(notes, '<fn id="fn' .. num .. '">' .. s .. '</fn>')
+  -- return the footnote reference, linked to the note.
+  return '<a id="fnref' .. num .. '" href="#fn' .. num ..
+            '"><sup>' .. num .. '</sup></a>'
+end
+
+function Span(s, attr)
+  return s
+end
