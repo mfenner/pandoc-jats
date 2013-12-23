@@ -2,7 +2,7 @@
 layout: post
 title: "Nine simple ways to make it easier to (re)use your data"
 tags: [example, citation]
-contributors:
+author:
  - surname: White
    given-names: Ethan P.
    orcid: http://orcid.org/0000-0001-6728-7745
@@ -36,8 +36,7 @@ journal:
   title: PeerJ Preprints
   publisher-id: peerj-preprints
   eissn: 2167-9843
-publisher:
-  name: PeerJ Inc.
+  publisher-name: PeerJ Inc.
 ---
 >This paper in markdown format was written by Ethan White et al.  The markdown file and the associated bibliogaphy and figure files are available from the [Github repository of the paper](https://github.com/weecology/data-sharing-paper).
 

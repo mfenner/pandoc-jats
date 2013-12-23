@@ -37,20 +37,23 @@ end
 -- Flatten nested table, needed for nested YAML metadata.
 -- We only flatten associative arrays and create composite key,
 -- numbered arrays and flat tables are left intact.
+-- We also convert all hyphens in keys to underscores,
+-- so that they are proper variable names
 function flatten_table(tbl)
   local result = {}
 
   local function flatten(tbl, key)
+    key = key and key:gsub('-', '_')
     for k, v in pairs(tbl) do
       if type(k) == 'number' and k > 0 and k <= #tbl then
         result[key] = tbl
         break
       else
-        k = (key and key .. '_' or '') .. k
+        k = (key and key .. '_' or '') .. k:gsub('-', '_')
         if type(v) == 'table' then
           flatten(v, k)
         else
-          result[k] =  v
+          result[k] = v
         end
       end
     end
@@ -82,8 +85,8 @@ end
 function fill_template(template, data)
 
   --patterns
-  condition_pattern = '%$if%(([%a_][%w_]*%.*[%w_]*)%)%$\n(.-)%$endif%$'
-  loop_pattern = '%$for%(([%a_][%w_]*)%)%$\n(.-)%$endfor%$'
+  condition_pattern = '%$if%(([%a_][%w_]*%.*[%w_]*)%)%$%s*\n%s*(.-)%$endif%$%s*\n%s*'
+  loop_pattern = '%$for%(([%a_][%w_]*)%)%$%s*\n%s*(.-)%$endfor%$%s*\n%s*'
 
   -- check conditionals
   template = template:gsub(condition_pattern, function(tag, s)
@@ -94,18 +97,26 @@ function fill_template(template, data)
   template = template:gsub(loop_pattern, function(tag, s)
                r = ''
                if data[tag] then
-                 for _, t in pairs(data[tag]) do
+                 for i, t in ipairs(data[tag]) do
                    r = r .. fill_template(s, { [tag] = t })
                  end
                end
                return r
              end)
 
-  -- remove extra whitespace
-  template = template:gsub('[\n      ]+\n', '\n')
-
   -- insert values and attributes
-  return template:gsub('%$([%a_][%w_]*)%$', function(w) return data[w] or '' end)
+  template = template:gsub('%$([%a_][%w_]*%.*[%w_]*)%$', function(w)
+             local offset = w:find('%.')
+             if offset then
+               tag = w:sub(1, offset - 1)
+               attr = w:sub(offset + 1)
+               return data[tag] and data[tag][attr] or ''
+             else
+               return data[w] or ''
+             end
+           end)
+
+  return template
 end
 
 -- Convert pandoc alignment to something HTML can use.
@@ -138,6 +149,7 @@ local notes = {}
 -- body is a string, metadata is a table, variables is a table.
 function Doc(body, metadata, variables)
 
+  -- split of content that goes into back section
   local offset = body:find('<ref-')
   if (offset == nil) then
     back = ''
@@ -148,52 +160,38 @@ function Doc(body, metadata, variables)
 
   body = string.format('<sec>\n<title/>%s</sec>\n', body)
 
-  local data = metadata or {}
+  -- create new table that holds all metadata and document text
+  -- flatten nested YAML metadata
+  local data = flatten_table(metadata)
   data.body = body
   data.back = back
 
-  -- metadata groups
-  article = metadata['article'] or {}
-  journal = metadata['journal'] or {}
-  copyright = metadata['copyright'] or {}
+  -- sensible defaults
+  data.article_title = data.article_title or data.title
+  data.article_categories = data.article_categories or data.categories
+  data.kwd = data.kwd or data.tags
+  data.pub_date = data.pub_date or data.date or os.date('%Y-%m-%d')
+  data.contrib = data.contrib or data.author
 
-  -- variables required for validation
-  data.article_publisher_id = article['publisher-id']
-  data.article_doi = article['doi']
-  data.article_pmid = article['pmid']
-  data.article_pmcid = article['pmcid']
-  data.article_art_access_id = article['art-access-id']
-  if not (article['publisher-id'] or article['doi'] or article['pmid'] or article['pmcid'] or article['art-access-id']) then
+  -- use today's date if no publication date in ISO 8601 format is given
+  --if not (data.date and string.len(data.date) == 10) then
+
+  data.article_type = data.article_type or 'research-article'
+  if not (data.article_publisher_id or data.article_doi or data.article_pmid or data.article_pmcid or data.article_art_access_id) then
     data.article_art_access_id = ''
   end
-  data.journal_pissn = journal['pissn']
-  data.journal_eissn = journal['eissn']
-  if not (journal['pissn'] or journal['eissn']) then journal['eissn'] = '' end
-  data.journal_publisher_id = journal['publisher-id']
-  data.journal_nlm_ta = journal['nlm-ta']
-  data.journal_pmc = journal['pmc']
-  if not (journal['publisher-id'] or journal['nlm-ta'] or journal['pmc']) then
+  data.journal_title = data.journal_title or ''
+  if not (data.journal_pissn or data.journal_eissn) then data.journal_eissn = '' end
+  if not (data.journal_publisher_id or data.journal_nlm_ta or data.journal_pmc) then
     data.journal_publisher_id = ''
   end
-
-  -- defaults
-  data.journal_title = journal['title'] or ''
-
-  data.article_type = article['type'] or 'research-article'
-  data.article_heading = article['heading'] or 'Other'
-  data.article_category = article['category']
-  data.article_elocation_id = article['elocation-id'] or article['doi'] or 'Other'
-  data.article_title = metadata['title'] or 'Other'
-
-   -- use today's date if no pub-date in ISO 8601 format is given
-  if (article['pub-date'] and string.len(article['pub-date']) == 10) then
-    data.article_pub_date = article['pub-date']
-  else
-    data.article_pub_date = os.date('%Y-%m-%d')
+  data.article_heading = data.article_heading or 'Other'
+  data.article_elocation_id = data.article_elocation_id or data.article_doi or 'Other'
+  if (data.date_received or data.date_accepted) then
+    data.history = true
   end
 
-  -- data.author = metadata['author']
-
+  -- parse template
   template = find_template('default.jats')
   result = fill_template(template, data)
   return result

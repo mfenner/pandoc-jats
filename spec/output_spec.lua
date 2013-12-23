@@ -19,41 +19,127 @@ describe("fill_template", function()
     assert.is_true(type(fill_template) == 'function')
   end)
 
-  it("substitute value", function()
-    local template = '<body>$body$</body>'
-    local data = { ['body'] = 'test' }
-    assert.are.same(fill_template(template, data), '<body>test</body>')
+  describe("inline elements", function()
+
+    it("substitute value", function()
+      local template = '<body>$body$</body>'
+      local data = { body = 'test' }
+      local result = fill_template(template, data)
+      assert.are.same(result, '<body>test</body>')
+    end)
+
+    it("substitute attribute", function()
+      local template = '<article article-type="$article_type$">Test</article>'
+      local data = { article_type = 'research-article'}
+      local result = fill_template(template, data)
+      assert.are.same(result, '<article article-type="research-article">Test</article>')
+    end)
+
+    it("substitute value for table", function()
+      local template = '<article>$article.title$</article>'
+      local data = { article = { title = 'test' }}
+      local result = fill_template(template, data)
+      assert.are.same(result, '<article>test</article>')
+    end)
+
   end)
 
-  it("substitute attribute", function()
-    local template = '<article article-type="$article_type$">Test</article>'
-    local data = { ['article_type'] = 'research-article'}
-    assert.are.same(fill_template(template, data), '<article article-type="research-article">Test</article>')
-  end)
+  describe("block elements", function()
 
-  it("substitute value for table", function()
-    local template = '<article>$article.title$</article>'
-    local data = { ['article'] = { title = 'test' }}
-    assert.are.same(fill_template(template, data), '<article>test</article>')
-  end)
+    it("substitute value on condition", function()
+      local template = [[
+        $if(body)$
+        <body>$body$</body>
+        $endif$
+        ]]
+      local data = { body = 'test' }
+      local expected = [[
+        <body>test</body>
+        ]]
+      local result = fill_template(template, data)
+      assert.are.same(result, expected)
+    end)
 
-  it("substitute value on condition", function()
-    local template = '$if(body)$\n<body>$body$</body>\n$endif$'
-    local data = { ['body'] = 'test' }
-    result = fill_template(template, data)
-    assert.are.same(result, '<body>test</body>\n')
-  end)
+    it("don't substitute value on failed condition", function()
+      local template = [[
+        $if(body)$
+        <body>$body$</body>
+        $endif$
+        ]]
+      local data = {}
+      local expected = [[
+        ]]
+      local result = fill_template(template, data)
+      assert.are.same(result, expected)
+    end)
 
-  it("don't substitute value on failed condition", function()
-    local template = '$if(body)$\n<body>$body$</body>\n$endif$'
-    local data = {}
-    assert.are.same(fill_template(template, data), '')
-  end)
+    it("substitute value for table on missing attribute", function()
+      local template = [[
+        $if(article)$
+        <article>$article.title$</article>
+        $endif$
+        ]]
+      local data = { article = {}}
+      local expected = [[
+        <article></article>
+        ]]
+      local result = fill_template(template, data)
+      assert.are.same(result, expected)
+    end)
 
-  it("substitute values in loop", function()
-    local template = '$for(subject)$\n<subject>$subject$</subject>\n$endfor$'
-    local data = { ['subject'] = { [1] = 'test', [2] = 'test2' }}
-    assert.are.same(fill_template(template, data), '<subject>test</subject><subject>test2</subject>')
+    it("substitute values in loop", function()
+      local template = [[
+        $for(subject)$
+        <subject>$subject$</subject>
+        $endfor$
+        ]]
+      local data = { subject = { 'test', 'test2' }}
+      local expected = [[
+        <subject>test</subject>
+        <subject>test2</subject>
+        ]]
+      local result = fill_template(template, data)
+      print (inspect(result))
+      print (inspect(expected))
+      assert.are.same(result, expected)
+    end)
+
+    it("substitute values for table in loop", function()
+      local template = [[
+        $for(contrib)$
+        <contrib contrib-type="author">
+          $if(contrib.orcid)$
+          <contrib-id contrib-id-type="orcid">$contrib.orcid$</contrib-id>
+          $endif$
+          <name>
+            <surname>$contrib.surname$</surname>
+            <given-names>$contrib.given_names$</given-names>
+          </name>
+          $if(contrib.email)$
+          <email>$contrib.email$</email>
+        $endif$
+        </contrib>
+        $endfor$
+        ]]
+      local data = { contrib = {{ orcid = 'http://orcid.org/0000-0003-1419-2405',
+                                  surname = 'Smith',
+                                  given_names = 'John',
+                                  email = 'john@example.com' }}}
+      local expected = [[
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">http://orcid.org/0000-0003-1419-2405</contrib-id>
+          <name>
+            <surname>Smith</surname>
+            <given-names>John</given-names>
+          </name>
+          <email>john@example.com</email>
+        </contrib>
+        ]]
+      local result = fill_template(template, data)
+      print (inspect(result))
+      print (inspect(expected))
+      assert.are.same(result, expected)
+    end)
   end)
 
 end)
@@ -67,24 +153,28 @@ describe("flatten", function()
   it("nested table", function()
     local data = { body = { name = 'test', color = '#CCC' }}
     local expected = { body_name = 'test', body_color = '#CCC' }
-    assert.are.same(flatten_table(data), expected)
+    local result = flatten_table(data)
+    assert.are.same(result, expected)
   end)
 
   it("nested table with array", function()
     local data = { body = { name = 'test', color = '#CCC' }, author = {{ name = 'Smith' }, { name = 'Baker' }}}
     local expected = { body_name = 'test', body_color = '#CCC', author = {{ name = 'Smith' }, { name = 'Baker' }}}
-    assert.are.same(flatten_table(data), expected)
+    local result = flatten_table(data)
+    assert.are.same(result, expected)
   end)
 
   it("deeply nested table", function()
     local data = { body = { name = 'test', font = { color = { id = 1, value = '#CCC' }}}}
     local expected = { body_name = 'test', body_font_color_id = 1, body_font_color_value = '#CCC' }
-    assert.are.same(flatten_table(data), expected)
+    local result = flatten_table(data)
+    assert.are.same(result, expected)
   end)
 
   it("regular table", function()
     local data = { body = 'test' }
-    assert.are.same(flatten_table(data), data)
+    local result = flatten_table(data)
+    assert.are.same(result, data)
   end)
 
 end)

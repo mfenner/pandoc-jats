@@ -18,11 +18,13 @@
       </journal-title-group>
       <issn pub-type="ppub">$journal_pissn$</issn>
       <issn pub-type="epub">$journal_eissn$</issn>
-      <issn-l>$journal_eissn$</issn>
-      <pubisher>
-        <publisher-name>$publisher_name$</publisher-name>
-        <publisher-loc>$publisher_loc$</publisher-loc>
-      </pubisher>
+      <issn-l>$journal_eissn$</issn-l>
+      <publisher>
+        <publisher-name>$journal_publisher_name$</publisher-name>
+        $if(journal_publisher_loc)$
+        <publisher-loc>$journal_publisher_loc$</publisher-loc>
+      $endif$
+      </publisher>
     </journal-meta>
     <article-meta>
       $if(article_publisher_id)$
@@ -41,39 +43,35 @@
       <article-id pub-id-type="art_access-id">$article_art_access_id$</article-id>
       $endif$
       <article-categories>
-        <sub-group subj-group-type="heading">
+        <subj-group subj-group-type="heading">
           <subject>$article_heading$</subject>
-        </sub-group>
-        $if(article_category)$
-        <sub-group subj-group-type="categories">
-          $for(article_category)$
-          <subject>$article_category$</subject>
-          $endfor$
-        </sub-group>
+        </subj-group>
+        $if(article_categories)$
+        <subj-group subj-group-type="categories">
+          $for(article_categories)$
+          <subject>$article_categories$</subject>
+        $endfor$
+        </subj-group>
         $endif$
       </article-categories>
       <title-group>
         <article-title>$article_title$</article-title>
       </title-group>
-      $if(author)$
       <contrib-group>
-        $for(author)$
-        <contrib>
-          $if(author.orcid)$
-          <contrib-id contrib-id-type="orcid">$author.orcid$</contrib-id>
-          $endif$
+        $for(contrib)$
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">$contrib.orcid$</contrib-id>
           <name>
-            <surname>$author.surname$</surname>
-            <given-names>$author.given_names$</given-names>
+            <surname>$contrib.surname$</surname>
+            <given-names>$contrib.given_names$</given-names>
           </name>
-          $if(author.email)$
-          <email>$author.email$</email>
-          $endif$
+          $if(contrib.email)$
+          <email>$contrib.email$</email>
+        $endif$
         </contrib>
-        $endfor$
+      $endfor$
       </contrib-group>
-      $endif$
-      <pub-date pub-type="epub" iso-8601-date="$article_pub_date$">
+      <pub-date pub-type="epub" iso-8601-date="$pub_date$">
         <day></day>
         <month></month>
         <year></year>
@@ -90,32 +88,24 @@
       $if(article_lpage)$
       <lpage>$article_lpage$</lpage>
       $endif$
-      $if(article_eleocation_id)$
+      $if(article_elocation_id)$
       <elocation-id>$article_elocation_id$</elocation-id>
       $endif$
       $if(history)$
       <history>
-        $if(article_received_date)$
-        <date date-type="received" iso-8601-date="$article_received_date$">
-          <day></day>
-          <month></month>
-          <year></year>
-        </date>
-        $endif$
-        $if(article_received_date)$
-        <date date-type="accepted" iso-8601-date="$article_accepted_date$">
-          <day></day>
-          <month></month>
-          <year></year>
-        </date>
-        $endif$
       </history>
       $endif$
       <permissions>
+        $if(copyright_statement)$
         <copyright-statement>$copyright_statement$</copyright-statement>
+        $endif$
+        $if(copyright_year)$
         <copyright-year>$copyright_year$</copyright-year>
+        $endif$
+        $if(copyright_holder)$
         <copyright-holder>$copyright_holder$</copyright-holder>
-        <license license-type="$copyright-type$" xlink:href="$copyright_link$">
+        $endif$
+        <license license-type="$copyright_type$" xlink:href="$copyright_link$">
           <license-p></license-p>
         </license>
       </permissions>
@@ -123,9 +113,9 @@
       <kwd-group kwd-group-type="author">
         $for(kwd)$
         <kwd>$kwd$</kwd>
-        $endfor$
+      $endfor$
       </kwd-group>
-      $endif$
+    $endif$
     </article-meta>
   </front>
   <body>
@@ -135,5 +125,5 @@
   <back>
     $back$
   </back>
-  $endif$
+$endif$
 </article>

@@ -1,14 +1,14 @@
 ---
 layout: post
 title: "What Can Article Level Metrics Do for You?"
-tags: [example, markdown, article-level metrics, reproducibility]
+date: 2013-10-22
+tags: [molecular biology, cancer]
 article:
   type: research-article
   publisher-id: PBIOLOGY-D-13-03338
   doi: 10.1371/journal.pbio.1001687
-  pub-date: 2013-10-22
+  elocation-id: e1001687
   heading: Essay
-  category: [molecular biology, cancer]
 journal:
   publisher-id: plos
   publisher-name: Public Library of Science
