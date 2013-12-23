@@ -69,7 +69,7 @@
           <email>$contrib.email$</email>
         $endif$
         </contrib>
-      $endfor$
+        $endfor$
       </contrib-group>
       <pub-date pub-type="epub" iso-8601-date="$pub_date$">
         <day></day>
@@ -106,7 +106,7 @@
         <copyright-holder>$copyright_holder$</copyright-holder>
         $endif$
         <license license-type="$copyright_type$" xlink:href="$copyright_link$">
-          <license-p></license-p>
+          <license-p>$copyright_text$</license-p>
         </license>
       </permissions>
       $if(kwd)$
