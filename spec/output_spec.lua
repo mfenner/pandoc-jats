@@ -99,45 +99,21 @@ describe("fill_template", function()
         <subject>test2</subject>
         ]]
       local result = fill_template(template, data)
-      print (inspect(result))
-      print (inspect(expected))
       assert.are.same(result, expected)
     end)
 
     it("substitute values for table in loop", function()
       local template = [[
-        $for(contrib)$
-        <contrib contrib-type="author">
-          $if(contrib.orcid)$
-          <contrib-id contrib-id-type="orcid">$contrib.orcid$</contrib-id>
-          $endif$
-          <name>
-            <surname>$contrib.surname$</surname>
-            <given-names>$contrib.given_names$</given-names>
-          </name>
-          $if(contrib.email)$
-          <email>$contrib.email$</email>
-        $endif$
-        </contrib>
+        $for(subject)$
+        <subject>$subject.name$</subject>
         $endfor$
         ]]
-      local data = { contrib = {{ orcid = 'http://orcid.org/0000-0003-1419-2405',
-                                  surname = 'Smith',
-                                  given_names = 'John',
-                                  email = 'john@example.com' }}}
+      local data = { subject = {{ name = 'test' }, { name = 'test2' }}}
       local expected = [[
-        <contrib contrib-type="author">
-          <contrib-id contrib-id-type="orcid">http://orcid.org/0000-0003-1419-2405</contrib-id>
-          <name>
-            <surname>Smith</surname>
-            <given-names>John</given-names>
-          </name>
-          <email>john@example.com</email>
-        </contrib>
+        <subject>test</subject>
+        <subject>test2</subject>
         ]]
       local result = fill_template(template, data)
-      print (inspect(result))
-      print (inspect(expected))
       assert.are.same(result, expected)
     end)
   end)
