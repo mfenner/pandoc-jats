@@ -58,10 +58,11 @@ This tool needs extensive testing with as many markdown documents as possible. P
 
 ### Testing
 
-You'll need `buster` to run tests (you might need to install `luarocks` first):
+You'll need `buster` and `inspect` to run tests (you might need to install `luarocks` first):
 
 ```
 luarocks install buster
+luarocks install inspect
 ```
 
 Then run all tests from the root directory (the same directory as `jats.lua`):
