@@ -12,128 +12,13 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
--- Includes a modified version of Lua XML Builder by Evan Wies 2010
--- An easy-to-use XML generation library
--- Released under the MIT license
--- http://pastie.org/1893954
-
-function generate_tag( tag, ... )
-  -- create attribute string
-  local tvararg = {...}
-  local attr_str = ""
-  local had_attrs = false
-  if type(tvararg[1]) == 'table' then
-    had_attrs = true
-    for attr, val in pairs(tvararg[1]) do
-      -- replace two underscores with colon in attribute name
-      attr = attr:gsub("__", ":")
-
-      -- replace underscores with hyphens in attribute name
-      attr = attr:gsub("_", "-")
-
-      attr_str = string.format('%s %s="%s"', attr_str, attr, val)
-    end
-  end
-
-  -- replace underscores with hyphens in tag name
-  tag = tag:gsub("_", "-")
-
-  -- attribute-only or totally empty?
-  if #tvararg == 0 or (#tvararg == 1 and had_attrs) then
-    return ''
-  -- value is empty string
-  elseif (#tvararg == 1 or (#tvararg == 2 and had_attrs)) and tvararg[#tvararg] == '' then
-    return string.format("<%s%s/>", tag, attr_str)
-  end
-  -- create full
-  local result = string.format("<%s%s>", tag, attr_str)
-
-  -- add declaration if root tag
-  if tag == 'article' then
-    result = '<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN" "JATS-journalpublishing1.dtd">' .. result
-    result = '<?xml version="1.0" encoding="UTF-8"?>' .. result
-  end
-
-  for n, val in ipairs(tvararg) do
-    if not (n == 1 and had_attrs) then
-      result = result .. val
-    end
-  end
-  return string.format("%s</%s>", result, tag)
-end
-
--- tag names ending with '_pairs' contain multiple elements
-local function generate_tags( tag, ... )
-  local tvararg = {...}
-  local s = ''
-  if type(tvararg[1]) == 'table' then
-    for i, v in ipairs(tvararg[1]) do
-      if tvararg[2] == nil then
-        s = s .. generate_tag(tag, v)
-      else
-        s = s .. generate_tag('contrib', { contrib_type = v['type'] or 'author' },
-          generate_tag('contrib_id', { contrib_id_type = 'orcid' }, v['orcid']),
-          generate_tag('name',
-            generate_tag('surname', v['surname']),
-            generate_tag('given_names', v['given-names'])
-          ),
-          generate_tag('email', v['email'])
-        )
-      end
-    end
-  end
-  return s
-end
-
-local function generate_comment( ... )
-  local comments = "<!-- "
-  for _, v in ipairs{...} do
-    comments = comments .. v
-  end
-  return comments .. " -->"
-end
-
-local function generate_cdata( ... )
-  local cdata = "<![CDATA["
-  for _, v in ipairs{...} do
-    cdata = cdata .. v
-  end
-  return cdata .. "]]>"
-end
-
-
-local xml_builder_metatable = {
-  __index = function( table, key )
-    if key == "__comment" then
-      return function( ... ) return generate_comment(...) end
-    elseif key == "__cdata" then
-      return function( ... ) return generate_cdata(...) end
-    elseif key:sub(-6) == '_pairs' then
-      key = key:sub(1, -7)
-      return function( ... ) return generate_tags(key, ...) end
-    else
-      return function( ... ) return generate_tag(key, ...) end
-    end
-  end,
-}
-
--- the module table
-local xml_builder = {}
-
-function xml_builder.new( ... )
-  -- the magic happens via metatables
-  -- unless it is a special directive (__comment, __cdata),
-  -- the __index metamethod returns the generate_tag method
-  local tres = {}
-  setmetatable( tres, xml_builder_metatable )
-  return tres
-end
-
--- end XML Builder library
-
 -- XML character entity escaping
 function escape(s)
-  local map = { ['<'] = '&lt;', ['>'] = '&gt;', ['&'] = '&amp;', ['"'] = '&quot;', ["'"]= '&#39;' }
+  local map = { ['<'] = '&lt;',
+                ['>'] = '&gt;',
+                ['&'] = '&amp;',
+                ['"'] = '&quot;',
+                ['\'']= '&#39;' }
   return s:gsub("[<>&\"']", function(x) return map[x] end)
 end
 
@@ -149,17 +34,76 @@ local function attributes(attr)
   return table.concat(attr_table)
 end
 
--- Run cmd on a temporary file containing inp and return result.
-local function pipe(cmd, inp)
-  local tmp = os.tmpname()
-  local tmph = io.open(tmp, "w")
-  tmph:write(inp)
-  tmph:close()
-  local outh = io.popen(cmd .. " " .. tmp,"r")
-  local result = outh:read("*all")
-  outh:close()
-  os.remove(tmp)
+-- Flatten nested table, needed for nested YAML metadata.
+-- We only flatten associative arrays and create composite key,
+-- numbered arrays and flat tables are left intact.
+function flatten_table(tbl)
+  local result = {}
+
+  local function flatten(tbl)
+    for _, v in ipairs(tbl) do
+      if type(v) == "table" then
+        flatten(v)
+      else
+        table.insert(result, v)
+      end
+    end
+  end
+
+  flatten(tbl)
+
+  for k, v in ipairs(result) do
+    print (k)
+  end
   return result
+end
+
+-- Find a template and return its contents (or '' if
+-- not found). The template is sought first in the
+-- working directory, then in `templates`.
+function find_template(name)
+  local base, ext = name:match("([^%.]*)(.*)")
+  local fname = base .. ext
+  local file = io.open(fname, "read")
+  if not file then
+    file = io.open("templates/" .. fname, "read")
+  end
+  if file then
+    return file:read("*all")
+  else
+    return '$body$'
+  end
+end
+
+-- String substitution for Pandoc templates,
+-- observing if/endif, for/endfor and variable attributes.
+function fill_template(template, data)
+
+  --patterns
+  condition_pattern = '%$if%(([%a_][%w_]*%.*[%w_]*)%)%$\n(.-)%$endif%$'
+  loop_pattern = '%$for%(([%a_][%w_]*)%)%$\n(.-)%$endfor%$'
+
+  -- check conditionals
+  template = template:gsub(condition_pattern, function(tag, s)
+               return data[tag] and s or ''
+             end)
+
+  -- check loops
+  template = template:gsub(loop_pattern, function(tag, s)
+               r = ''
+               if data[tag] then
+                 for _, t in pairs(data[tag]) do
+                   r = r .. fill_template(s, { [tag] = t })
+                 end
+               end
+               return r
+             end)
+
+  -- remove extra whitespace
+  template = template:gsub('[\n      ]+\n', '\n')
+
+  -- insert values and attributes
+  return template:gsub('%$([%a_][%w_]*)%$', function(w) return data[w] or '' end)
 end
 
 -- Convert pandoc alignment to something HTML can use.
@@ -191,12 +135,7 @@ local notes = {}
 -- This function is called once for the whole document. Parameters:
 -- body is a string, metadata is a table, variables is a table.
 function Doc(body, metadata, variables)
-  -- for _,values in pairs(variables) do
-  --   for key,value in pairs(values) do
-  --     print(key,value)
-  --   end
-  -- end
-  -- put references into back
+
   local offset = body:find('<ref-')
   if (offset == nil) then
     back = ''
@@ -207,115 +146,55 @@ function Doc(body, metadata, variables)
 
   body = string.format('<sec>\n<title/>%s</sec>\n', body)
 
+  local data = metadata or {}
+  data.body = body
+  data.back = back
+
+  -- metadata groups
   article = metadata['article'] or {}
   journal = metadata['journal'] or {}
   copyright = metadata['copyright'] or {}
 
   -- variables required for validation
+  data.article_publisher_id = article['publisher-id']
+  data.article_doi = article['doi']
+  data.article_pmid = article['pmid']
+  data.article_pmcid = article['pmcid']
+  data.article_art_access_id = article['art-access-id']
   if not (article['publisher-id'] or article['doi'] or article['pmid'] or article['pmcid'] or article['art-access-id']) then
-    article['art-access-id'] = ''
+    data.article_art_access_id = ''
   end
+  data.journal_pissn = journal['pissn']
+  data.journal_eissn = journal['eissn']
   if not (journal['pissn'] or journal['eissn']) then journal['eissn'] = '' end
+  data.journal_publisher_id = journal['publisher-id']
+  data.journal_nlm_ta = journal['nlm-ta']
+  data.journal_pmc = journal['pmc']
   if not (journal['publisher-id'] or journal['nlm-ta'] or journal['pmc']) then
-    journal['publisher-id'] = ''
+    data.journal_publisher_id = ''
   end
-  if not journal['title'] then journal['title'] = '' end
 
   -- defaults
-  article['type'] = article['type'] or 'research-article'
-  article['heading'] = article['heading'] or 'Other'
-  article['elocation-id'] = article['elocation-id'] or article['doi'] or 'Other'
-  article['title'] = metadata['title'] or 'Other'
+  data.journal_title = journal['title'] or ''
+
+  data.article_type = article['type'] or 'research-article'
+  data.article_heading = article['heading'] or 'Other'
+  data.article_category = article['category']
+  data.article_elocation_id = article['elocation-id'] or article['doi'] or 'Other'
+  data.article_title = metadata['title'] or 'Other'
 
    -- use today's date if no pub-date in ISO 8601 format is given
-  if not (article['pub-date'] and string.len(article['pub-date']) == 10) then
-    article['pub-date'] = os.date('%Y-%m-%d')
+  if (article['pub-date'] and string.len(article['pub-date']) == 10) then
+    data.article_pub_date = article['pub-date']
+  else
+    data.article_pub_date = os.date('%Y-%m-%d')
   end
 
-  xml = xml_builder.new()
+  -- data.author = metadata['author']
 
-  return xml.article({ article_type = article['type'], xmlns__xlink = 'http://www.w3.org/1999/xlink' },
-           xml.front(
-             xml.journal_meta(
-               xml.journal_id({ journal_id_type = 'publisher-id' }, journal['publisher-id']),
-               xml.journal_id({ journal_id_type = 'nlm-ta' }, journal['nlm-ta']),
-               xml.journal_id({ journal_id_type = 'pmc' }, journal['pmc']),
-               xml.journal_title_group(
-                 xml.journal_title(journal['title'])
-               ),
-               xml.issn({ pub_type = 'ppub' }, journal['pissn']),
-               xml.issn({ pub_type = 'epub' }, journal['eissn']),
-               xml.issn_l(journal['eissn']),
-               xml.publisher(
-                 xml.publisher_name((journal['publisher-name']  or '')),
-                 xml.publisher_loc(journal['publisher-loc'])
-               )
-             ),
-             xml.article_meta(
-               xml.article_id({ pub_id_type = 'publisher-id' }, article['publisher-id']),
-               xml.article_id({ pub_id_type = 'doi' }, article['doi']),
-               xml.article_id({ pub_id_type = 'pmid' }, article['pmid']),
-               xml.article_id({ pub_id_type = 'pmcid' }, article['pmcid']),
-               xml.article_id({ pub_id_type = 'art-access-id' }, article['art-access-id']),
-               xml.article_categories(
-                 xml.subj_group({ subj_group_type = 'heading' },
-                   xml.subject(article['heading'])
-                   ),
-                 xml.subj_group({ subj_group_type = 'categories' },
-                   xml.subject_pairs(article['categories'])
-                 )
-               ),
-               xml.title_group(
-                 xml.article_title(article['title'])
-               ),
-               xml.contrib_group(
-                 xml.contrib_pairs(metadata['contributors'],
-                   xml.contrib_id(),
-                   xml.name(
-                     xml.surname(),
-                     xml.given_names()
-                   ),
-                   xml.email()
-                 )
-               ),
-               xml.pub_date({ pub_type = 'epub', iso_8601_date = article['pub-date'] },
-                 xml.day(string.sub(article['pub-date'], 9, 10)),
-                 xml.month(string.sub(article['pub-date'], 6, 7)),
-                 xml.year(string.sub(article['pub-date'], 1, 4))
-               ),
-               xml.volume(article['volume']),
-               xml.issue(article['issue']),
-               xml.fpage(article['fpage']),
-               xml.lpage(article['lpage']),
-               xml.elocation_id(article['elocation-id']),
-               xml.history(
-                 xml.date({ date_type = 'received', iso_8601_date = article['received-date'] },
-                   xml.day(article['received-date'] and string.sub(article['received-date'], 9, 10)),
-                   xml.month(article['received-date'] and string.sub(article['received-date'], 6, 7)),
-                   xml.year(article['received-date'] and string.sub(article['received-date'], 1, 4))
-                 ),
-                 xml.date({ date_type = 'accepted', iso_8601_date = article['accepted-date'] },
-                   xml.day(article['accepted-date'] and string.sub(article['accepted-date'], 9, 10)),
-                   xml.month(article['accepted-date'] and string.sub(article['accepted-date'], 6, 7)),
-                   xml.year(article['accepted-date'] and string.sub(article['accepted-date'], 1, 4))
-                 )
-               ),
-               xml.permissions(
-                 xml.copyright_statement(copyright['statement']),
-                 xml.copyright_year(copyright['year']),
-                 xml.copyright_holder(copyright['holder']),
-                 xml.license({ license_type = copyright['type'], xlink__href = copyright['link'] },
-                   xml.license_p(copyright['text'])
-                 )
-               ),
-               xml.kwd_group({ kwd_group_type = 'author' },
-                 xml.kwd_pairs(metadata['tags'])
-               )
-             )
-           ),
-           xml.body(body),
-           xml.back(back)
-         )
+  template = find_template('default.jats')
+  result = fill_template(template, data)
+  return result
 end
 
 -- Blocksep is used to separate block elements.
@@ -371,15 +250,7 @@ function Header(lev, s, attr)
 end
 
 function CodeBlock(s, attr)
-  -- If code block has class 'dot', pipe the contents through dot
-  -- and base64, and include the base64-encoded png as a data: URL.
-  if attr.class and string.match(' ' .. attr.class .. ' ',' dot ') then
-    local png = pipe("base64", pipe("dot -Tpng", s))
-    return '<img src="data:image/png;base64,' .. png .. '"/>'
-  -- otherwise treat as code (one could pipe through a highlighter)
-  else
-    return '<preformat>' .. escape(s) .. '</preformat>'
-  end
+  return '<preformat>' .. escape(s) .. '</preformat>'
 end
 
 function BlockQuote(s)

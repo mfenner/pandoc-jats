@@ -16,7 +16,7 @@ describe("required custom writer functions", function()
     assert.is_true(type(Plain) == 'function')
   end)
 
-   it("CaptionedImage", function()
+  it("CaptionedImage", function()
     assert.is_true(type(CaptionedImage) == 'function')
   end)
 

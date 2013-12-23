@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN"
+                  "JATS-journalpublishing1.dtd">
+<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="$article_type$">
+  <front>
+    <journal-meta>
+      $if(journal_publisher_id)$
+      <journal-id journal-id-type="publisher">$journal_publisher_id$</journal-id>
+      $endif$
+      $if(journal_nlm_ta)$
+      <journal-id journal-id-type="nlm-ta">$journal_nlm_ta$</journal-id>
+      $endif$
+      $if(journal_pmc)$
+      <journal-id journal-id-type="pmc">$journal_pmc$</journal-id>
+      $endif$
+      <journal-title-group>
+        <journal-title>$journal_title$</journal-title>
+      </journal-title-group>
+      <issn pub-type="ppub">$journal_pissn$</issn>
+      <issn pub-type="epub">$journal_eissn$</issn>
+      <issn-l>$journal_eissn$</issn>
+      <pubisher>
+        <publisher-name>$publisher_name$</publisher-name>
+        <publisher-loc>$publisher_loc$</publisher-loc>
+      </pubisher>
+    </journal-meta>
+    <article-meta>
+      $if(article_publisher_id)$
+      <article-id pub-id-type="publisher-id">$article_publisher_id$</article-id>
+      $endif$
+      $if(article_doi)$
+      <article-id pub-id-type="doi">$article_doi$</article-id>
+      $endif$
+      $if(article_pmid)$
+      <article-id pub-id-type="pmid">$article_pmid$</article-id>
+      $endif$
+      $if(article_pmcid)$
+      <article-id pub-id-type="pmcid">$article_pmcid$</article-id>
+      $endif$
+      $if(article_art_access_id)$
+      <article-id pub-id-type="art_access-id">$article_art_access_id$</article-id>
+      $endif$
+      <article-categories>
+        <sub-group subj-group-type="heading">
+          <subject>$article_heading$</subject>
+        </sub-group>
+        $if(article_category)$
+        <sub-group subj-group-type="categories">
+          $for(article_category)$
+          <subject>$article_category$</subject>
+          $endfor$
+        </sub-group>
+        $endif$
+      </article-categories>
+      <title-group>
+        <article-title>$article_title$</article-title>
+      </title-group>
+      $if(author)$
+      <contrib-group>
+        $for(author)$
+        <contrib>
+          $if(author.orcid)$
+          <contrib-id contrib-id-type="orcid">$author.orcid$</contrib-id>
+          $endif$
+          <name>
+            <surname>$author.surname$</surname>
+            <given-names>$author.given_names$</given-names>
+          </name>
+          $if(author.email)$
+          <email>$author.email$</email>
+          $endif$
+        </contrib>
+        $endfor$
+      </contrib-group>
+      $endif$
+      <pub-date pub-type="epub" iso-8601-date="$article_pub_date$">
+        <day></day>
+        <month></month>
+        <year></year>
+      </pub-date>
+      $if(article_volume)$
+      <volume>$article_volume$</volume>
+      $endif$
+      $if(article_issue)$
+      <issue>$article_issue$</issue>
+      $endif$
+      $if(article_fpage)$
+      <fpage>$article_fpage$</fpage>
+      $endif$
+      $if(article_lpage)$
+      <lpage>$article_lpage$</lpage>
+      $endif$
+      $if(article_eleocation_id)$
+      <elocation-id>$article_elocation_id$</elocation-id>
+      $endif$
+      $if(history)$
+      <history>
+        $if(article_received_date)$
+        <date date-type="received" iso-8601-date="$article_received_date$">
+          <day></day>
+          <month></month>
+          <year></year>
+        </date>
+        $endif$
+        $if(article_received_date)$
+        <date date-type="accepted" iso-8601-date="$article_accepted_date$">
+          <day></day>
+          <month></month>
+          <year></year>
+        </date>
+        $endif$
+      </history>
+      $endif$
+      <permissions>
+        <copyright-statement>$copyright_statement$</copyright-statement>
+        <copyright-year>$copyright_year$</copyright-year>
+        <copyright-holder>$copyright_holder$</copyright-holder>
+        <license license-type="$copyright-type$" xlink:href="$copyright_link$">
+          <license-p></license-p>
+        </license>
+      </permissions>
+      $if(kwd)$
+      <kwd-group kwd-group-type="author">
+        $for(kwd)$
+        <kwd>$kwd$</kwd>
+        $endfor$
+      </kwd-group>
+      $endif$
+    </article-meta>
+  </front>
+  <body>
+    $body$
+  </body>
+  $if(back)$
+  <back>
+    $back$
+  </back>
+  $endif$
+</article>

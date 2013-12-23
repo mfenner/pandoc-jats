@@ -8,6 +8,7 @@ article:
   doi: 10.1371/journal.pbio.1001687
   pub-date: 2013-10-22
   heading: Essay
+  category: [molecular biology, cancer]
 journal:
   publisher-id: plos
   publisher-name: Public Library of Science
@@ -17,7 +18,7 @@ journal:
   title: PLoS Biology
   eissn: 1545-7885
   pissn: 1544-9173
-contributors:
+author:
  - surname: Fenner
    given-names: Martin
    orcid: http://orcid.org/0000-0003-1419-2405
