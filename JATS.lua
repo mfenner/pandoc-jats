@@ -24,7 +24,7 @@ end
 
 -- Helper function to convert an attributes table into
 -- a string that can be put into XML elements.
-local function attributes(attr)
+function attributes(attr)
   local attr_table = {}
   for x,y in pairs(attr) do
     if y and y ~= "" then
@@ -40,21 +40,23 @@ end
 function flatten_table(tbl)
   local result = {}
 
-  local function flatten(tbl)
-    for _, v in ipairs(tbl) do
-      if type(v) == "table" then
-        flatten(v)
+  local function flatten(tbl, key)
+    for k, v in pairs(tbl) do
+      if type(k) == 'number' and k > 0 and k <= #tbl then
+        result[key] = tbl
+        break
       else
-        table.insert(result, v)
+        k = (key and key .. '_' or '') .. k
+        if type(v) == 'table' then
+          flatten(v, k)
+        else
+          result[k] =  v
+        end
       end
     end
   end
 
   flatten(tbl)
-
-  for k, v in ipairs(result) do
-    print (k)
-  end
   return result
 end
 

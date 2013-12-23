@@ -1,3 +1,4 @@
+local inspect = require 'inspect'
 require("../jats")
 
 describe("custom writer functions", function()
@@ -64,13 +65,25 @@ describe("flatten", function()
   end)
 
   it("nested table", function()
-    local data = { ['body'] = { ['name'] = 'test', ['color'] = '#CCC' }}
-    local result = { ['body_name'] = 'test', ['body_color'] = '#CCC' }
-    assert.are.same(flatten_table(data), data)
+    local data = { body = { name = 'test', color = '#CCC' }}
+    local expected = { body_name = 'test', body_color = '#CCC' }
+    assert.are.same(flatten_table(data), expected)
+  end)
+
+  it("nested table with array", function()
+    local data = { body = { name = 'test', color = '#CCC' }, author = {{ name = 'Smith' }, { name = 'Baker' }}}
+    local expected = { body_name = 'test', body_color = '#CCC', author = {{ name = 'Smith' }, { name = 'Baker' }}}
+    assert.are.same(flatten_table(data), expected)
+  end)
+
+  it("deeply nested table", function()
+    local data = { body = { name = 'test', font = { color = { id = 1, value = '#CCC' }}}}
+    local expected = { body_name = 'test', body_font_color_id = 1, body_font_color_value = '#CCC' }
+    assert.are.same(flatten_table(data), expected)
   end)
 
   it("regular table", function()
-    local data = { ['body'] = 'test' }
+    local data = { body = 'test' }
     assert.are.same(flatten_table(data), data)
   end)
 
