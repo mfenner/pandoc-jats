@@ -1,61 +1,61 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN"
                   "JATS-journalpublishing1.dtd">
-<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="$article_type$">
+<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="$article-type$">
   <front>
     <journal-meta>
-      $if(journal_publisher_id)$
-      <journal-id journal-id-type="publisher">$journal_publisher_id$</journal-id>
+      $if(journal-publisher-id)$
+      <journal-id journal-id-type="publisher-id">$journal-publisher-id$</journal-id>
       $endif$
-      $if(journal_nlm_ta)$
-      <journal-id journal-id-type="nlm-ta">$journal_nlm_ta$</journal-id>
+      $if(journal-nlm-ta)$
+      <journal-id journal-id-type="nlm-ta">$journal-nlm-ta$</journal-id>
       $endif$
-      $if(journal_pmc)$
-      <journal-id journal-id-type="pmc">$journal_pmc$</journal-id>
+      $if(journal-pmc)$
+      <journal-id journal-id-type="pmc">$journal-pmc$</journal-id>
       $endif$
       <journal-title-group>
-        <journal-title>$journal_title$</journal-title>
+        <journal-title>$journal-title$</journal-title>
       </journal-title-group>
-      <issn pub-type="ppub">$journal_pissn$</issn>
-      <issn pub-type="epub">$journal_eissn$</issn>
-      <issn-l>$journal_eissn$</issn-l>
+      <issn pub-type="ppub">$journal-pissn$</issn>
+      <issn pub-type="epub">$journal-eissn$</issn>
+      <issn-l>$journal-eissn$</issn-l>
       <publisher>
-        <publisher-name>$journal_publisher_name$</publisher-name>
-        $if(journal_publisher_loc)$
-        <publisher-loc>$journal_publisher_loc$</publisher-loc>
+        <publisher-name>$journal-publisher-name$</publisher-name>
+        $if(journal-publisher-loc)$
+        <publisher-loc>$journal-publisher-loc$</publisher-loc>
       $endif$
       </publisher>
     </journal-meta>
     <article-meta>
-      $if(article_publisher_id)$
-      <article-id pub-id-type="publisher-id">$article_publisher_id$</article-id>
+      $if(article-publisher-id)$
+      <article-id pub-id-type="publisher-id">$article-publisher-id$</article-id>
       $endif$
-      $if(article_doi)$
-      <article-id pub-id-type="doi">$article_doi$</article-id>
+      $if(article-doi)$
+      <article-id pub-id-type="doi">$article-doi$</article-id>
       $endif$
-      $if(article_pmid)$
-      <article-id pub-id-type="pmid">$article_pmid$</article-id>
+      $if(article-pmid)$
+      <article-id pub-id-type="pmid">$article-pmid$</article-id>
       $endif$
-      $if(article_pmcid)$
-      <article-id pub-id-type="pmcid">$article_pmcid$</article-id>
+      $if(article-pmcid)$
+      <article-id pub-id-type="pmcid">$article-pmcid$</article-id>
       $endif$
-      $if(article_art_access_id)$
-      <article-id pub-id-type="art_access-id">$article_art_access_id$</article-id>
+      $if(article-art-access-id)$
+      <article-id pub-id-type="art-access-id">$article-art-access-id$</article-id>
       $endif$
       <article-categories>
         <subj-group subj-group-type="heading">
-          <subject>$article_heading$</subject>
+          <subject>$article-heading$</subject>
         </subj-group>
-        $if(article_categories)$
+        $if(article-categories)$
         <subj-group subj-group-type="categories">
-          $for(article_categories)$
-          <subject>$article_categories$</subject>
+          $for(article-categories)$
+          <subject>$article-categories$</subject>
         $endfor$
         </subj-group>
         $endif$
       </article-categories>
       <title-group>
-        <article-title>$article_title$</article-title>
+        <article-title>$article-title$</article-title>
       </title-group>
       <contrib-group>
         $for(contrib)$
@@ -63,7 +63,7 @@
           <contrib-id contrib-id-type="orcid">$contrib.orcid$</contrib-id>
           <name>
             <surname>$contrib.surname$</surname>
-            <given-names>$contrib.given_names$</given-names>
+            <given-names>$contrib.given-names$</given-names>
           </name>
           $if(contrib.email)$
           <email>$contrib.email$</email>
@@ -71,42 +71,42 @@
         </contrib>
         $endfor$
       </contrib-group>
-      <pub-date pub-type="epub" iso-8601-date="$pub_date$">
+      <pub-date pub-type="epub" iso-8601-date="$pub-date$">
         <day></day>
         <month></month>
         <year></year>
       </pub-date>
-      $if(article_volume)$
-      <volume>$article_volume$</volume>
+      $if(article-volume)$
+      <volume>$article-volume$</volume>
       $endif$
-      $if(article_issue)$
-      <issue>$article_issue$</issue>
+      $if(article-issue)$
+      <issue>$article-issue$</issue>
       $endif$
-      $if(article_fpage)$
-      <fpage>$article_fpage$</fpage>
+      $if(article-fpage)$
+      <fpage>$article-fpage$</fpage>
       $endif$
-      $if(article_lpage)$
-      <lpage>$article_lpage$</lpage>
+      $if(article-lpage)$
+      <lpage>$article-lpage$</lpage>
       $endif$
-      $if(article_elocation_id)$
-      <elocation-id>$article_elocation_id$</elocation-id>
+      $if(article-elocation-id)$
+      <elocation-id>$article-elocation-id$</elocation-id>
       $endif$
       $if(history)$
       <history>
       </history>
       $endif$
       <permissions>
-        $if(copyright_statement)$
-        <copyright-statement>$copyright_statement$</copyright-statement>
+        $if(copyright-statement)$
+        <copyright-statement>$copyright-statement$</copyright-statement>
         $endif$
-        $if(copyright_year)$
-        <copyright-year>$copyright_year$</copyright-year>
+        $if(copyright-year)$
+        <copyright-year>$copyright-year$</copyright-year>
         $endif$
-        $if(copyright_holder)$
-        <copyright-holder>$copyright_holder$</copyright-holder>
+        $if(copyright-holder)$
+        <copyright-holder>$copyright-holder$</copyright-holder>
         $endif$
-        <license license-type="$copyright_type$" xlink:href="$copyright_link$">
-          <license-p>$copyright_text$</license-p>
+        <license license-type="$copyright-type$" xlink:href="$copyright-link$">
+          <license-p>$copyright-text$</license-p>
         </license>
       </permissions>
       $if(kwd)$

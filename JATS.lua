@@ -34,7 +34,7 @@ function attributes(attr)
   return table.concat(attr_table)
 end
 
--- Flatten nested table, needed for nested YAML metadata.
+-- Flatten nested table, needed for nested YAML metadata['
 -- We only flatten associative arrays and create composite key,
 -- numbered arrays and flat tables are left intact.
 -- We also convert all hyphens in keys to underscores,
@@ -43,13 +43,12 @@ function flatten_table(tbl)
   local result = {}
 
   local function flatten(tbl, key)
-    key = key and key:gsub('-', '_')
     for k, v in pairs(tbl) do
       if type(k) == 'number' and k > 0 and k <= #tbl then
         result[key] = tbl
         break
       else
-        k = (key and key .. '_' or '') .. k:gsub('-', '_')
+        k = (key and key .. '-' or '') .. k
         if type(v) == 'table' then
           flatten(v, k)
         else
@@ -85,8 +84,8 @@ end
 function fill_template(template, data)
 
   --patterns
-  condition_pattern = '%$if%(([%a_][%w_]*%.*[%w_]*)%)%$%s*\n%s*(.-)%$endif%$%s*\n%s*'
-  loop_pattern = '%$for%(([%a_][%w_]*)%)%$%s*\n%s*(.-)%$endfor%$%s*\n%s*'
+  condition_pattern = '%$if%(([%a%-][%w%-]*%.*[%w%-]*)%)%$%s*\n%s*(.-)%$endif%$%s*\n%s*'
+  loop_pattern = '%$for%(([%a%-][%w%-]*)%)%$%s*\n%s*(.-)%$endfor%$%s*\n%s*'
 
   -- check conditionals
   template = template:gsub(condition_pattern, function(tag, s)
@@ -105,7 +104,7 @@ function fill_template(template, data)
              end)
 
   -- insert values and attributes
-  template = template:gsub('%$([%a_][%w_]*%.*[%w_]*)%$', function(w)
+  template = template:gsub('%$([%a%-][%w%-]*%.*[%w%-]*)%$', function(w)
              local offset = w:find('%.')
              if offset then
                tag = w:sub(1, offset - 1)
@@ -163,32 +162,32 @@ function Doc(body, metadata, variables)
   -- create new table that holds all metadata and document text
   -- flatten nested YAML metadata
   local data = flatten_table(metadata)
-  data.body = body
-  data.back = back
+  data['body'] = body
+  data['back'] = back
 
   -- sensible defaults
-  data.article_title = data.article_title or data.title
-  data.article_categories = data.article_categories or data.categories
-  data.kwd = data.kwd or data.tags
-  data.pub_date = data.pub_date or data.date or os.date('%Y-%m-%d')
-  data.contrib = data.contrib or data.author
+  data['article-title'] = data['article-title'] or data['title']
+  data['article-categories'] = data['article-categories'] or data['categories']
+  data['kwd'] = data['kwd'] or data['tags']
+  data['pub-date'] = data['pub-date'] or data['date'] or os.date('%Y-%m-%d')
+  data['contrib'] = data['contrib'] or data['author']
 
   -- use today's date if no publication date in ISO 8601 format is given
-  --if not (data.date and string.len(data.date) == 10) then
+  --if not (data['date and string.len(data['date) == 10) then
 
-  data.article_type = data.article_type or 'research-article'
-  if not (data.article_publisher_id or data.article_doi or data.article_pmid or data.article_pmcid or data.article_art_access_id) then
-    data.article_art_access_id = ''
+  data['article-type'] = data['article-type'] or 'research-article'
+  if not (data['article-publisher-id'] or data['article-doi'] or data['article-pmid'] or data['article-pmcid'] or data['article-art-access-id']) then
+    data['article-art-access-id'] = ''
   end
-  data.journal_title = data.journal_title or ''
-  if not (data.journal_pissn or data.journal_eissn) then data.journal_eissn = '' end
-  if not (data.journal_publisher_id or data.journal_nlm_ta or data.journal_pmc) then
-    data.journal_publisher_id = ''
+  data['journal-title'] = data['journal-title'] or ''
+  if not (data['journal-pissn'] or data['journal-eissn']) then data['journal-eissn'] = '' end
+  if not (data['journal-publisher-id'] or data['journal-nlm-ta'] or data['journal-pmc']) then
+    data['journal-publisher-id'] = ''
   end
-  data.article_heading = data.article_heading or 'Other'
-  data.article_elocation_id = data.article_elocation_id or data.article_doi or 'Other'
-  if (data.date_received or data.date_accepted) then
-    data.history = true
+  data['article-heading'] = data['article-heading'] or 'Other'
+  data['article-elocation-id'] = data['article-elocation-id'] or data['article-doi'] or 'Other'
+  if (data['date-received'] or data['date-accepted']) then
+    data['history'] = true
   end
 
   -- parse template

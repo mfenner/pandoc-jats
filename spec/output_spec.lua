@@ -24,22 +24,25 @@ describe("fill_template", function()
     it("substitute value", function()
       local template = '<body>$body$</body>'
       local data = { body = 'test' }
+      local expected = '<body>test</body>'
       local result = fill_template(template, data)
-      assert.are.same(result, '<body>test</body>')
+      assert.are.same(result, expected)
     end)
 
     it("substitute attribute", function()
-      local template = '<article article-type="$article_type$">Test</article>'
-      local data = { article_type = 'research-article'}
+      local template = '<article article-type="$article-type$">Test</article>'
+      local data = { ['article-type'] = 'research-article'}
+      local expected = '<article article-type="research-article">Test</article>'
       local result = fill_template(template, data)
-      assert.are.same(result, '<article article-type="research-article">Test</article>')
+      assert.are.same(result, expected)
     end)
 
     it("substitute value for table", function()
       local template = '<article>$article.title$</article>'
       local data = { article = { title = 'test' }}
+      local expected = '<article>test</article>'
       local result = fill_template(template, data)
-      assert.are.same(result, '<article>test</article>')
+      assert.are.same(result, expected)
     end)
 
   end)
@@ -128,21 +131,21 @@ describe("flatten", function()
 
   it("nested table", function()
     local data = { body = { name = 'test', color = '#CCC' }}
-    local expected = { body_name = 'test', body_color = '#CCC' }
+    local expected = { ['body-name'] = 'test', ['body-color'] = '#CCC' }
     local result = flatten_table(data)
     assert.are.same(result, expected)
   end)
 
   it("nested table with array", function()
     local data = { body = { name = 'test', color = '#CCC' }, author = {{ name = 'Smith' }, { name = 'Baker' }}}
-    local expected = { body_name = 'test', body_color = '#CCC', author = {{ name = 'Smith' }, { name = 'Baker' }}}
+    local expected = { ['body-name'] = 'test', ['body-color'] = '#CCC', author = {{ name = 'Smith' }, { name = 'Baker' }}}
     local result = flatten_table(data)
     assert.are.same(result, expected)
   end)
 
   it("deeply nested table", function()
     local data = { body = { name = 'test', font = { color = { id = 1, value = '#CCC' }}}}
-    local expected = { body_name = 'test', body_font_color_id = 1, body_font_color_value = '#CCC' }
+    local expected = { ['body-name'] = 'test', ['body-font-color-id'] = 1, ['body-font-color-value'] = '#CCC' }
     local result = flatten_table(data)
     assert.are.same(result, expected)
   end)
