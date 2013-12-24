@@ -165,7 +165,7 @@ function Doc(body, metadata, variables)
   -- create new table that holds all metadata and document text
   -- flatten nested YAML metadata
   local data = flatten_table(metadata)
-  data['body'] = body
+  data.body = body
 
   -- split of content that goes into back section
   local offset = data.body:find('<ref-')
@@ -174,7 +174,7 @@ function Doc(body, metadata, variables)
     data.body = data.body:sub(1, offset - 1)
   end
 
-  data.body = string.format('<sec>\n<title/>%s</sec>\n', body)
+  data.body = string.format('<sec>\n<title/>%s</sec>\n', data.body)
 
   -- sensible defaults
   data['article-title'] = data['article-title'] or data['title']
