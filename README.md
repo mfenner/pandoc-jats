@@ -9,7 +9,7 @@ Just download the file `JATS.lua` and put it in a convenient location. Pandoc in
 ### Usage
 To convert the markdown file `example1.md` into the JATS XML file `example1.xml`, using the bibliography `example.bib` and the citation style `apa.csl` use the following command:
 
-    pandoc -f examples/example1.md --filter pandoc-citeproc --bibliography=examples/example.bib --csl=examples/apa.csl -t jats.lua -o example1.xml
+    pandoc examples/example1.md --filter pandoc-citeproc --bibliography=examples/example.bib --csl=examples/apa.csl -t jats.lua -o example1.xml
 
 ### Metadata
 The metadata required for JATS can be stored in a YAML header - the same format that is also used by the Jekyll static blog generator. An example [from a recent blog post](http://blog.martinfenner.org/2013/12/11/what-can-article-level-metrics-do-for-you/) is below:

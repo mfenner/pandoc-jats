@@ -71,10 +71,10 @@
         </contrib>
         $endfor$
       </contrib-group>
-      <pub-date pub-type="epub" iso-8601-date="$pub-date$">
-        <day></day>
-        <month></month>
-        <year></year>
+      <pub-date pub-type="epub" iso-8601-date="$pub-date.iso8601$">
+        <day>$pub-date.day$</day>
+        <month>$pub-date.month$</month>
+        <year>$pub-date.year$</year>
       </pub-date>
       $if(article-volume)$
       <volume>$article-volume$</volume>

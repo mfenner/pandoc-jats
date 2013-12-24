@@ -12,6 +12,7 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
+--local inspect = require ('inspect')
 -- XML character entity escaping
 function escape(s)
   local map = { ['<'] = '&lt;',
@@ -118,6 +119,19 @@ function fill_template(template, data)
   return template
 end
 
+-- Create table with year, month, day and iso8601-formatted date
+-- Input is iso8601-formatted date as string
+-- Return nil if input is not a valid date
+function date_helper(iso_date)
+  if not iso_date or string.len(iso_date) ~= 10 then return nil end
+
+  _,_,y,m,d = string.find(iso_date, '(%d+)-(%d+)-(%d+)')
+  time = os.time({ year = y, month = m, day = d })
+  date = os.date('*t', time)
+  date.iso8601 = string.format('%04d-%02d-%02d', date.year, date.month, date.day)
+  return date
+end
+
 -- Convert pandoc alignment to something HTML can use.
 -- align is AlignLeft, AlignRight, AlignCenter, or AlignDefault.
 function html_align(align)
@@ -148,33 +162,27 @@ local notes = {}
 -- body is a string, metadata is a table, variables is a table.
 function Doc(body, metadata, variables)
 
-  -- split of content that goes into back section
-  local offset = body:find('<ref-')
-  if (offset == nil) then
-    back = ''
-  else
-    back = body:sub(offset)
-    body = body:sub(1, offset - 1)
-  end
-
-  body = string.format('<sec>\n<title/>%s</sec>\n', body)
-
   -- create new table that holds all metadata and document text
   -- flatten nested YAML metadata
   local data = flatten_table(metadata)
   data['body'] = body
-  data['back'] = back
+
+  -- split of content that goes into back section
+  local offset = data.body:find('<ref-')
+  if offset then
+    data.back = data.body:sub(offset)
+    data.body = data.body:sub(1, offset - 1)
+  end
+
+  data.body = string.format('<sec>\n<title/>%s</sec>\n', body)
 
   -- sensible defaults
   data['article-title'] = data['article-title'] or data['title']
   data['article-categories'] = data['article-categories'] or data['categories']
   data['kwd'] = data['kwd'] or data['tags']
   data['pub-date'] = data['pub-date'] or data['date'] or os.date('%Y-%m-%d')
+  data['pub-date'] = date_helper(data['pub-date'])
   data['contrib'] = data['contrib'] or data['author']
-
-  -- use today's date if no publication date in ISO 8601 format is given
-  --if not (data['date and string.len(data['date) == 10) then
-
   data['article-type'] = data['article-type'] or 'research-article'
   if not (data['article-publisher-id'] or data['article-doi'] or data['article-pmid'] or data['article-pmcid'] or data['article-art-access-id']) then
     data['article-art-access-id'] = ''

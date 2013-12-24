@@ -15,7 +15,7 @@ end)
 
 describe("fill_template", function()
 
-  it("fill_template", function()
+  it("function exists", function()
     assert.is_true(type(fill_template) == 'function')
   end)
 
@@ -154,6 +154,28 @@ describe("flatten", function()
     local data = { body = 'test' }
     local result = flatten_table(data)
     assert.are.same(result, data)
+  end)
+
+end)
+
+describe("date_helper", function()
+
+  it("function exists", function()
+    assert.is_true(type(date_helper) == 'function')
+  end)
+
+  it("generates iso8601 dates", function()
+    local date = '2013-12-24'
+    local expected = '2013-12-24'
+    local result = date_helper(date).iso8601
+    assert.are.same(result, expected)
+  end)
+
+  it("rejects malformed dates", function()
+    local date = '12/24/13'
+    local expected = nil
+    local result = date_helper(date)
+    assert.are.same(result, expected)
   end)
 
 end)
