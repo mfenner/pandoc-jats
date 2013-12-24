@@ -11,6 +11,9 @@ To convert the markdown file `example1.md` into the JATS XML file `example1.xml`
 
     pandoc examples/example1.md --filter pandoc-citeproc -t jats.lua -o example1.xml
 
+### Template
+`pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates).
+
 ### Metadata
 The metadata required for JATS can be stored in a YAML header - the same format that is also used by the Jekyll static blog generator. An example [from a recent blog post](http://blog.martinfenner.org/2013/12/11/what-can-article-level-metrics-do-for-you/) is below:
 
