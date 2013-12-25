@@ -7,8 +7,8 @@ describe("custom writer functions", function()
     assert.are.same(escape('<'), '&lt;')
   end)
 
-  it("find_template", function()
-    assert.is_true(type(find_template) == 'function')
+  it("function read_file exists", function()
+    assert.is_true(type(read_file) == 'function')
   end)
 
 end)
@@ -175,6 +175,71 @@ describe("date_helper", function()
     local date = '12/24/13'
     local expected = nil
     local result = date_helper(date)
+    assert.are.same(result, expected)
+  end)
+
+end)
+
+describe("parse_yaml", function()
+
+  it("function exists", function()
+    assert.is_true(type(parse_yaml) == 'function')
+  end)
+
+  it("parse variables", function()
+    local config = [[
+    publisher-id: plos
+    publisher-name: Public Library of Science
+    ]]
+    local expected = { ['publisher-id'] = 'plos',
+                       ['publisher-name'] = 'Public Library of Science' }
+    local result = parse_yaml(config)
+    assert.are.same(result, expected)
+  end)
+
+  it("strip quotes", function()
+    local config = [[
+    title: "What Can Article Level Metrics Do for You?"
+    alternate-title: 'What Can Article Level Metrics Do for You?'
+    ]]
+    local expected = { title = 'What Can Article Level Metrics Do for You?',
+                       ['alternate-title'] = 'What Can Article Level Metrics Do for You?' }
+    local result = parse_yaml(config)
+    assert.are.same(result, expected)
+  end)
+
+  it("parse nested variables", function()
+    local config = [[
+    doi: 10.1371/journal.pbio.1001687
+    journal:
+      publisher-id: plos
+    date: 2013-12-25
+    publisher:
+      publisher-name: Public Library of Science
+    ]]
+    local expected = { date = "2013-12-25",
+                       doi = "10.1371/journal.pbio.1001687",
+                       journal = {
+                         ["publisher-id"] = "plos"
+                       },
+                       publisher = {
+                         ["publisher-name"] = "Public Library of Science"
+                       }
+                     }
+    local result = parse_yaml(config)
+    assert.are.same(result, expected)
+  end)
+
+  it("parse array variable", function()
+    local config = [[
+    publisher-id: plos
+    publisher-name: Public Library of Science
+    tags: [molecular biology, cancer]
+    ]]
+    local expected = { ['publisher-id'] = 'plos',
+                       ['publisher-name'] = 'Public Library of Science',
+                       tags = { 'molecular biology', 'cancer' } }
+    local result = parse_yaml(config)
     assert.are.same(result, expected)
   end)
 

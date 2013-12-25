@@ -15,7 +15,7 @@ To convert the markdown file `example1.md` into the JATS XML file `example1.xml`
 `pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates).
 
 ### Metadata
-The metadata required for JATS can be stored in a YAML header - the same format that is also used by the Jekyll static blog generator. An example [from a recent blog post](http://blog.martinfenner.org/2013/12/11/what-can-article-level-metrics-do-for-you/) is below:
+The metadata required for JATS can be stored in a YAML metadata block (new in Pandoc 1.12, the same format is also used by the Jekyll static blog generator. An example [from a recent blog post](http://blog.martinfenner.org/2013/12/11/what-can-article-level-metrics-do-for-you/) is below:
 
     --
     layout: post
@@ -52,11 +52,30 @@ The metadata required for JATS can be stored in a YAML header - the same format 
       link: http://creativecommons.org/licenses/by/3.0/
     ---
 
+The nested format for metadata is optional, you can for example also use `article-doi` or `copyright-year`.
+
+### Config File
+Many of the metadata above don't change between articles and they can therefore also be stored in a config file `config.yml` in the same folder as `jats.lua`:
+
+    journal:
+      publisher-id: plos
+      publisher-name: Public Library of Science
+      publisher-loc: San Francisco, USA
+      nlm-ta: PLoS Biol
+      pmc: plosbiol
+      title: PLoS Biology
+      eissn: 1545-7885
+      pissn: 1544-9173
+    copyright:
+      text: "This is an open-access article distributed under the terms of the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited."
+      type: open-access
+      link: http://creativecommons.org/licenses/by/3.0/
+
 ### Validation
 The JATS XML should be validated, for example with the excellent [jats-conversion](https://github.com/PeerJ/jats-conversion) tools written by Alf Eaton.
 
 ### To Do
-The focus of the first release was to generate valid JATS. This means that not all elements and attributes are supported, or that the support could be improved (e.g. for references). We also want to add configuration settings for publisher and journal elements, so that we don't have to store them in the article metadata.
+The focus of the first release was to generate valid JATS. This means that not all elements and attributes are supported, or that the support could be improved (e.g. for references).
 
 ### Feedback
 This tool needs extensive testing with as many markdown documents as possible. Please open an issue in the [Issue Tracker](https://github.com/mfenner/pandoc-jats/issues) if you find a conversion problem.

@@ -12,7 +12,6 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
---local inspect = require ('inspect')
 -- XML character entity escaping
 function escape(s)
   local map = { ['<'] = '&lt;',
@@ -63,28 +62,75 @@ function flatten_table(tbl)
   return result
 end
 
--- Find a template and return its contents (or '' if
--- not found). The template is sought first in the
--- working directory, then in `templates`.
-function find_template(name)
+-- Read a file from the working directory and
+-- return its contents (or nil if not found).
+function read_file(name)
   local base, ext = name:match("([^%.]*)(.*)")
   local fname = base .. ext
   local file = io.open(fname, "read")
   if not file then
     file = io.open("templates/" .. fname, "read")
   end
-  if file then
-    return file:read("*all")
-  else
-    return '$body$'
+  if not file then return nil end
+  return file:read("*all")
+end
+
+-- Parse YAML string and return table.
+-- We only understand a subset.
+function parse_yaml(s)
+  local l = {}
+  local c = {}
+  local i = 0
+  local k = nil
+
+  -- patterns
+  line_pattern = '(.-)\r?\n'
+  config_pattern = '^(%s*)([%w%-]+):%s*(.-)$'
+
+  -- First split string into lines
+  local function lines(line)
+    table.insert(l, line)
+    return ""
   end
+
+  lines((s:gsub(line_pattern, lines)))
+
+  -- Then go over each line and check value and indentation
+  for _, v in ipairs(l) do
+    v:gsub(config_pattern, function(indent, tag, v)
+      if (v == '') then
+        i, k = string.len(indent), tag
+        c[tag] = {}
+      else
+        -- check whether value is enclosed by brackets, i.e. an array
+        if v:find('^%[(.-)%]$') then
+          arr = {};
+          for match in (v:sub(2, -2) .. ','):gmatch('(.-)' .. ',%s*') do
+              table.insert(arr, match);
+          end
+          v = arr;
+        else
+          -- if it is a string, remove optional enclosing quotes
+          v = v:match('^["\']*(.-)["\']*$')
+        end
+
+        if string.len(indent) == i + 2 and k then
+          c[k][tag] = v
+        else
+          c[tag] = v
+        end
+      end
+    end)
+  end
+
+  return c
 end
 
 -- String substitution for Pandoc templates,
 -- observing if/endif, for/endfor and variable attributes.
 function fill_template(template, data)
 
-  --patterns
+  -- patterns
   condition_pattern = '%$if%(([%a%-][%w%-]*%.*[%w%-]*)%)%$%s*\n%s*(.-)%$endif%$%s*\n%s*'
   loop_pattern = '%$for%(([%a%-][%w%-]*)%)%$%s*\n%s*(.-)%$endfor%$%s*\n%s*'
 
@@ -163,44 +209,53 @@ local notes = {}
 function Doc(body, metadata, variables)
 
   -- create new table that holds all metadata and document text
+  -- start with some reasonable default values that can be overwritten
+  local data = { ['pub-date'] = os.date('%Y-%m-%d'),
+                 ['article-type'] = 'research-article',
+                 ['article-heading'] = 'Article' }
+
+  -- read YAML config file into table
+  local config = read_file('config.yml')
+  config = config and parse_yaml(config) or {}
+
+  -- reuse some default metadata
+  metadata['article-title'] = metadata['article-title'] or metadata['title']
+  metadata['article-categories'] = metadata['article-categories'] or metadata['categories']
+  metadata['kwd'] = metadata['kwd'] or metadata['tags']
+  metadata['pub-date'] = metadata['pub-date'] or metadata['date']
+  metadata['contrib'] = metadata['contrib'] or metadata['author']
+
+  -- merge data from config file, metadata and variables
+  -- overwrite value if key is the same in this order
+  tables = { config, metadata, variables }
+  for _,tbl in ipairs(tables) do
+    for k,v in pairs(tbl) do data[k] = v end
+  end
+
   -- flatten nested YAML metadata
-  local data = flatten_table(metadata)
-  data.body = body
+  data = flatten_table(data)
+
+  -- create date objects
+  dates = { 'pub-date', 'date-received', 'date-accepted' }
+  for _,d in ipairs(dates) do data[d] = date_helper(data[d]) end
 
   -- split of content that goes into back section
+  -- add enclosing <sec> tags
+  data.body = body
   local offset = data.body:find('<ref-')
   if offset then
     data.back = data.body:sub(offset)
     data.body = data.body:sub(1, offset - 1)
   end
-
   data.body = string.format('<sec>\n<title/>%s</sec>\n', data.body)
 
-  -- sensible defaults
-  data['article-title'] = data['article-title'] or data['title']
-  data['article-categories'] = data['article-categories'] or data['categories']
-  data['kwd'] = data['kwd'] or data['tags']
-  data['pub-date'] = data['pub-date'] or data['date'] or os.date('%Y-%m-%d')
-  data['pub-date'] = date_helper(data['pub-date'])
-  data['contrib'] = data['contrib'] or data['author']
-  data['article-type'] = data['article-type'] or 'research-article'
-  if not (data['article-publisher-id'] or data['article-doi'] or data['article-pmid'] or data['article-pmcid'] or data['article-art-access-id']) then
-    data['article-art-access-id'] = ''
-  end
-  data['journal-title'] = data['journal-title'] or ''
-  if not (data['journal-pissn'] or data['journal-eissn']) then data['journal-eissn'] = '' end
-  if not (data['journal-publisher-id'] or data['journal-nlm-ta'] or data['journal-pmc']) then
-    data['journal-publisher-id'] = ''
-  end
-  data['article-heading'] = data['article-heading'] or 'Other'
-  data['article-elocation-id'] = data['article-elocation-id'] or data['article-doi'] or 'Other'
   if (data['date-received'] or data['date-accepted']) then
     data['history'] = true
   end
 
   -- parse template
-  template = find_template('default.jats')
-  result = fill_template(template, data)
+  template = read_file('default.jats')
+  result = template and fill_template(template, data) or ''
   return result
 end
 
