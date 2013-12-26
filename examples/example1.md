@@ -4,7 +4,7 @@ title: "What Can Article Level Metrics Do for You?"
 date: 2013-10-22
 tags: [molecular biology, cancer]
 bibliography: examples/example.bib
-csl: examples/apa.csl
+csl: examples/jats.csl
 article:
   type: research-article
   publisher-id: PBIOLOGY-D-13-03338

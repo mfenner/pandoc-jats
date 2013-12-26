@@ -12,7 +12,7 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
--- XML character entity escaping
+-- XML character entity escaping and unescaping
 function escape(s)
   local map = { ['<'] = '&lt;',
                 ['>'] = '&gt;',
@@ -20,6 +20,15 @@ function escape(s)
                 ['"'] = '&quot;',
                 ['\'']= '&#39;' }
   return s:gsub("[<>&\"']", function(x) return map[x] end)
+end
+
+function unescape(s)
+  local map = { ['&lt;'] = '<',
+                ['&gt;'] = '>',
+                ['&amp;'] = '&',
+                ['&quot;'] = '"',
+                ['&#39;']= '\'' }
+  return s:gsub('(&(#?)([%d%a]+);)', function(x) return map[x] end)
 end
 
 -- Helper function to convert an attributes table into
@@ -178,6 +187,14 @@ function date_helper(iso_date)
   return date
 end
 
+-- temporary fix
+function fix_citeproc(s)
+  s = s:gsub('</surname>, ', '</surname>')
+  s = s:gsub('</name></name><name>','</name>')
+  return s
+end
+
+
 -- Convert pandoc alignment to something HTML can use.
 -- align is AlignLeft, AlignRight, AlignCenter, or AlignDefault.
 function html_align(align)
@@ -248,6 +265,7 @@ function Doc(body, metadata, variables)
     data.body = data.body:sub(1, offset - 1)
   end
   data.body = string.format('<sec>\n<title/>%s</sec>\n', data.body)
+  if data.back then data.back = fix_citeproc(data.back) end
 
   if (data['date-received'] or data['date-accepted']) then
     data['history'] = true
@@ -397,13 +415,8 @@ function DefinitionList(items)
 end
 
 function Div(s, attr)
-  -- parse references
   if attr.class and string.match(' ' .. attr.class .. ' ',' references ') then
-    local i = 0
-    s = s:gsub("<p>(.-)</p>", function (c)
-          i = i + 1
-          return '<ref id="ref-' .. i .. '">\n<mixed-citation>' .. c .. '</mixed-citation>\n</ref>'
-        end)
+    s = s:gsub("<p>(.-)</p>", '%1')
     return '<ref-list>\n<title>References</title>\n' .. s .. '\n</ref-list>'
   else
     return s
@@ -413,7 +426,7 @@ end
 -- inline elements
 
 function Str(s)
-  return escape(s)
+  return s
 end
 
 function Space()
@@ -453,7 +466,11 @@ function DoubleQuoted(s)
 end
 
 function Cite(s)
-  return '<xref ref-type="bibr">' .. s .. '</xref>'
+  cite_table = {};
+  for m in (s .. ','):gmatch('(.-)' .. ',') do
+    table.insert(cite_table, string.format('<xref ref-type="bibr" rid="%s">%s</xref>', m, m))
+  end
+  return table.concat(cite_table)
 end
 
 function Code(s, attr)
@@ -477,7 +494,11 @@ function LineBreak()
 end
 
 function Link(s, src, tit)
-  return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
+  -- TODO: disable parsing of links in the bibliography
+  return s
+  -- else
+  --   return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
+  -- end
 end
 
 function Image(src, tit, s)

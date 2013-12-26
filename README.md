@@ -12,7 +12,33 @@ To convert the markdown file `example1.md` into the JATS XML file `example1.xml`
     pandoc examples/example1.md --filter pandoc-citeproc -t jats.lua -o example1.xml
 
 ### Template
-`pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates).
+`pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates) (e.g. if/end conditions, for/end loops, and a dot can be used to select a field of a variable that takes an object):
+
+    <?xml version="1.0" encoding="utf-8" ?>
+    <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.0 20120330//EN"
+                      "JATS-journalpublishing1.dtd">
+    <article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="$article-type$">
+      <front>
+        <journal-meta>
+          $if(journal-publisher-id)$
+          <journal-id journal-id-type="publisher-id">$journal-publisher-id$</journal-id>
+          $endif$
+
+        $for(contrib)$
+        <contrib contrib-type="author">
+          <contrib-id contrib-id-type="orcid">$contrib.orcid$</contrib-id>
+          <name>
+            <surname>$contrib.surname$</surname>
+            <given-names>$contrib.given-names$</given-names>
+          </name>
+          $if(contrib.email)$
+          <email>$contrib.email$</email>
+        $endif$
+        </contrib>
+        $endfor$
+
+### Citation Style (CSL)
+`pandoc-jats` uses the `jats.csl` citation style that is included in the `examples` folder. This style generates XML in JATS format.
 
 ### Metadata
 The metadata required for JATS can be stored in a YAML metadata block (new in Pandoc 1.12, the same format is also used by the Jekyll static blog generator. An example [from a recent blog post](http://blog.martinfenner.org/2013/12/11/what-can-article-level-metrics-do-for-you/) is below:
@@ -23,7 +49,7 @@ The metadata required for JATS can be stored in a YAML metadata block (new in Pa
     date: 2013-10-22
     tags: [example, markdown, article-level metrics, reproducibility]
     bibliography: examples/example.bib
-    csl: examples/apa.csl
+    csl: examples/jats.csl
     article:
       type: research-article
       publisher-id: PBIOLOGY-D-13-03338

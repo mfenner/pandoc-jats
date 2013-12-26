@@ -4,7 +4,15 @@ require("../jats")
 describe("custom writer functions", function()
 
   it("should escape XML entities", function()
-    assert.are.same(escape('<'), '&lt;')
+    local result = escape('<')
+    local expected = '&lt;'
+    assert.are.same(result, expected)
+  end)
+
+  it("should unescape XML entities", function()
+    local result = unescape('&lt;')
+    expected = '<'
+    assert.are.same(result, expected)
   end)
 
   it("function read_file exists", function()
