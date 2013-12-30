@@ -12,6 +12,8 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
+local inspect = require 'inspect'
+
 -- XML character entity escaping and unescaping
 function escape(s)
   local map = { ['<'] = '&lt;',
@@ -187,6 +189,52 @@ function date_helper(iso_date)
   return date
 end
 
+-- Create affiliation table, linked to authors via aff-id
+function affiliation_helper(tbl)
+
+  set = {}
+  i = 0
+  for _,author in ipairs(tbl.author) do
+    if author.affiliation then
+      if not set[author.affiliation] then
+        i = i + 1
+        set[author.affiliation] = i
+      end
+      author['aff-id'] = set[author.affiliation]
+    end
+  end
+
+  tbl.aff = {}
+  for k,v in pairs(set) do
+    aff = { id = v, name = k }
+    table.insert(tbl.aff, aff)
+  end
+
+  return tbl
+end
+
+-- Create corresponding author table, linked to authors via cor-id
+function corresp_helper(tbl)
+
+  set = {}
+  i = 0
+  for _,author in ipairs(tbl.author) do
+    if author.corresp and author.email then
+      i = i + 1
+      set[i] = author.email
+      author['cor-id'] = i
+    end
+  end
+
+  tbl.corresp = {}
+  for k,v in pairs(set) do
+    corresp = { id = k, email = v }
+    table.insert(tbl.corresp, corresp)
+  end
+
+  return tbl
+end
+
 -- temporary fix
 function fix_citeproc(s)
   s = s:gsub('</surname>, ', '</surname>')
@@ -255,6 +303,14 @@ function Doc(body, metadata, variables)
   -- create date objects
   dates = { 'pub-date', 'date-received', 'date-accepted' }
   for _,d in ipairs(dates) do data[d] = date_helper(data[d]) end
+
+  -- create affiliation objects
+  data = affiliation_helper(data)
+
+  -- create corresponding author objects
+  data = corresp_helper(data)
+
+  print (inspect(data))
 
   -- split of content that goes into back section
   -- add enclosing <sec> tags

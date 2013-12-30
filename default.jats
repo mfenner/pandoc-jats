@@ -67,10 +67,34 @@
           </name>
           $if(contrib.email)$
           <email>$contrib.email$</email>
-        $endif$
+          $endif$
+          $if(contrib.aff-id)$
+          <xref ref-type="aff" rid="aff-$contrib.aff-id$"/>
+          $endif$
+          $if(contrib.cor-id)$
+          <xref ref-type="corresp" rid="cor-$contrib.cor-id$"><sup>*</sup></xref>
+          $endif$
         </contrib>
         $endfor$
+        $if(aff)$
+        $for(aff)$
+        <aff id="aff-$aff.id$">$aff.name$</aff>
+        $endfor$
+        $endif$
       </contrib-group>
+      <author-notes>
+        $if(corresp)$
+        $for(corresp)$
+        <corresp id="cor-$corresp.id$">* E-mail: <email>$corresp.email$</email></corresp>
+        $endfor$
+        $endif$
+        $if(article-conflict)$
+        <fn fn-type="conflict"><p>$article-conflict$</p></fn>
+        $endif$
+        $if(article-con)$
+        <fn fn-type="con"><p>$article-con$</p></fn>
+      $endif$
+      </author-notes>
       <pub-date pub-type="epub" iso-8601-date="$pub-date.iso8601$">
         <day>$pub-date.day$</day>
         <month>$pub-date.month$</month>
@@ -115,7 +139,13 @@
         <kwd>$kwd$</kwd>
       $endfor$
       </kwd-group>
+      $endif$
+      $if(funding-statement)$
+      <funding-group>
+        <funding-statement>$funding-statement$</funding-statement>
+      </funding-group>
     $endif$
+    <funding-group>
     </article-meta>
   </front>
   <body>

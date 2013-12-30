@@ -11,6 +11,8 @@ article:
   doi: 10.1371/journal.pbio.1001687
   elocation-id: e1001687
   heading: Essay
+  conflict: Martin Fenner is the technical lead for the PLOS Article-Level Metrics project.
+  funding-statement: The author received no specific funding for this work.
 journal:
   publisher-id: plos
   publisher-name: Public Library of Science
@@ -25,6 +27,7 @@ author:
    given-names: Martin
    orcid: http://orcid.org/0000-0003-1419-2405
    email: mfenner@plos.org
+   affiliation: Article-Level Metrics Project, Public Library of Science, San Francisco, California, United States of America
    corresp: yes
 copyright:
   holder: Martin Fenner
