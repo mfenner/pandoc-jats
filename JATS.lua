@@ -12,8 +12,6 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
-local inspect = require 'inspect'
-
 -- XML character entity escaping and unescaping
 function escape(s)
   local map = { ['<'] = '&lt;',
@@ -309,8 +307,6 @@ function Doc(body, metadata, variables)
 
   -- create corresponding author objects
   data = corresp_helper(data)
-
-  print (inspect(data))
 
   -- split of content that goes into back section
   -- add enclosing <sec> tags
