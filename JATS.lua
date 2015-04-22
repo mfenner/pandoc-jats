@@ -76,7 +76,7 @@ end
 function read_file(name)
   local base, ext = name:match("([^%.]*)(.*)")
   local fname = base .. ext
-  local file = io.open(fname, "read")
+  local file = io.open(fname, "r")
   if not file then return nil end
   return file:read("*all")
 end
