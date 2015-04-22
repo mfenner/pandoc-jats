@@ -1,19 +1,21 @@
 pandoc-jats
 ===========
 
-A Lua [custom writer for Pandoc](http://johnmacfarlane.net/pandoc/README.html#custom-writers) generating **JATS XML** - specifically [Journal Publishing Tag Library NISO JATS Version 1.0]](http://jats.nlm.nih.gov/publishing/tag-library/1.0/index.html).
+A Lua [custom writer for Pandoc](http://johnmacfarlane.net/pandoc/README.html#custom-writers) generating **JATS XML** - specifically [Journal Publishing Tag Library NISO JATS Version 1.0](http://jats.nlm.nih.gov/publishing/tag-library/1.0/index.html).
 
 ### Installation
 Just download the file `JATS.lua` and put it in a convenient location. Pandoc includes a lua interpreter, so lua need not be installed separately. You need at least Pandoc version 1.13, released August 2014 (this release adds `--template` support for custom writers).
 
 ### Usage
-To convert the markdown file `example1.md` into the JATS XML file `example1.xml`, (using the bibliography and csl embedded in the metadata below) use the following command:
+To convert the markdown file `example1.md` into the JATS XML file `example1.xml`, use the following command:
 
-    pandoc examples/example1.md --filter pandoc-citeproc -t jats.lua -o example1.xml --template=default.jats
+```
+pandoc examples/example1.md --filter pandoc-citeproc -t jats.lua -o example1.xml --template=default.jats --bibliography=examples/example.bib --csl=examples/jats
+```
 
 ### Template
 `pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates) (e.g. if/end conditions, for/end loops, and a dot can be used to select a field of a variable that takes an object),
-but is more complex because of the extensive metadata in JATS.
+but is more complex because of the extensive metadata in JATS. Templates are parsed by Pandoc, not the custom Lua writer.
 
 ```
 <?xml version="1.0" encoding="utf-8" ?>
@@ -216,7 +218,7 @@ $endif$
   </front>
   $body$
 </article>
-``
+```
 
 ### Citation Style (CSL)
 `pandoc-jats` uses the `jats.csl` citation style that is included in the `examples` folder. This style generates XML in JATS format, which is an interim solution as CSL is not really intended to generate XML.
