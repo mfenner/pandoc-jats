@@ -1,9 +1,13 @@
 ---
 layout: post
 title: "Additional Markdown we need in Scholarly Texts"
+author: "Martin Fenner"
+date: "2012-12-18"
 description: ""
-category: 
+category:
 tags: [markdown]
+bibliography: examples/example.bib
+csl: examples/jats.csl
 ---
 Following up from [my post last
 week](/2012/12/13/a-call-for-scholarly-markdown/),
@@ -105,7 +109,7 @@ Math
 ----
 
 Complicated math is probably best done in a different authoring
-environment, but simple formulas, both inline $\sqrt2x$ and block elements 
+environment, but simple formulas, both inline $\sqrt2x$ and block elements
 
 >  ${\frac {d}{dx}}\arctan(\sin({x}^{2}))=-2\,{\frac {\cos({x}^{2})x}{-2+\left (\cos({x}^{2})\right )^{2}}}$
 

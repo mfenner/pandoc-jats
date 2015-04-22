@@ -77,9 +77,6 @@ function read_file(name)
   local base, ext = name:match("([^%.]*)(.*)")
   local fname = base .. ext
   local file = io.open(fname, "read")
-  if not file then
-    file = io.open("templates/" .. fname, "read")
-  end
   if not file then return nil end
   return file:read("*all")
 end
@@ -133,45 +130,6 @@ function parse_yaml(s)
   end
 
   return c
-end
-
--- String substitution for Pandoc templates,
--- observing if/endif, for/endfor and variable attributes.
-function fill_template(template, data)
-
-  -- patterns
-  condition_pattern = '%$if%(([%a%-][%w%-]*%.*[%w%-]*)%)%$%s*\n%s*(.-)%$endif%$%s*\n%s*'
-  loop_pattern = '%$for%(([%a%-][%w%-]*)%)%$%s*\n%s*(.-)%$endfor%$%s*\n%s*'
-
-  -- check conditionals
-  template = template:gsub(condition_pattern, function(tag, s)
-               return data[tag] and s or ''
-             end)
-
-  -- check loops
-  template = template:gsub(loop_pattern, function(tag, s)
-               r = ''
-               if data[tag] then
-                 for i, t in ipairs(data[tag]) do
-                   r = r .. fill_template(s, { [tag] = t })
-                 end
-               end
-               return r
-             end)
-
-  -- insert values and attributes
-  template = template:gsub('%$([%a%-][%w%-]*%.*[%w%-]*)%$', function(w)
-             local offset = w:find('%.')
-             if offset then
-               tag = w:sub(1, offset - 1)
-               attr = w:sub(offset + 1)
-               return data[tag] and data[tag][attr] or ''
-             else
-               return data[w] or ''
-             end
-           end)
-
-  return template
 end
 
 -- Create table with year, month, day and iso8601-formatted date
@@ -240,7 +198,6 @@ function fix_citeproc(s)
   return s
 end
 
-
 -- Convert pandoc alignment to something HTML can use.
 -- align is AlignLeft, AlignRight, AlignCenter, or AlignDefault.
 function html_align(align)
@@ -253,81 +210,71 @@ function html_align(align)
   end
 end
 
--- The following code will produce runtime warnings when you haven't defined
--- all of the functions you need for the custom writer, so it's useful
--- to include when you're working on a writer.
-local meta = {}
-meta.__index =
-  function(_, key)
-    io.stderr:write(string.format("WARNING: Undefined function '%s'\n",key))
-    return function() return "" end
-  end
-setmetatable(_G, meta)
-
 -- Table to store footnotes, so they can be included at the end.
 local notes = {}
 
 -- This function is called once for the whole document. Parameters:
 -- body is a string, metadata is a table, variables is a table.
+-- This gives you a fragment.  You could use the metadata table to
+-- fill variables in a custom lua template.  Or, pass `--template=...`
+-- to pandoc, and pandoc will do the template processing as
+-- usual.
 function Doc(body, metadata, variables)
-
-  -- create new table that holds all metadata and document text
-  -- start with some reasonable default values that can be overwritten
-  local data = { ['pub-date'] = os.date('%Y-%m-%d'),
-                 ['article-type'] = 'research-article',
-                 ['article-heading'] = 'Article' }
-
-  -- read YAML config file into table
-  local config = read_file('config.yml')
-  config = config and parse_yaml(config) or {}
-
-  -- reuse some default metadata
-  metadata['article-title'] = metadata['article-title'] or metadata['title']
-  metadata['article-categories'] = metadata['article-categories'] or metadata['categories']
-  metadata['kwd'] = metadata['kwd'] or metadata['tags']
-  metadata['pub-date'] = metadata['pub-date'] or metadata['date']
-  metadata['contrib'] = metadata['contrib'] or metadata['author']
-
-  -- merge data from config file, metadata and variables
-  -- overwrite value if key is the same in this order
-  tables = { config, metadata, variables }
-  for _,tbl in ipairs(tables) do
-    for k,v in pairs(tbl) do data[k] = v end
+  local buffer = {}
+  local function add(s)
+    table.insert(buffer, s)
   end
 
-  -- flatten nested YAML metadata
-  data = flatten_table(data)
+  add('<body>\n')
+  add('<sec>\n<title/>\n')
 
-  -- create date objects
-  dates = { 'pub-date', 'date-received', 'date-accepted' }
-  for _,d in ipairs(dates) do data[d] = date_helper(data[d]) end
-
-  -- create affiliation objects
-  data = affiliation_helper(data)
-
-  -- create corresponding author objects
-  data = corresp_helper(data)
-
-  -- split of content that goes into back section
-  -- add enclosing <sec> tags
-  data.body = body
-  local offset = data.body:find('<ref-')
+  -- split of references that go into back section
+  -- first detect references
+  local offset = body:find('<sec><title>References')
+  local back = nil
   if offset then
-    data.back = data.body:sub(offset)
-    data.body = data.body:sub(1, offset - 1)
+    back = body:sub(offset)
+    body = body:sub(1, offset - 1)
   end
-  data.body = string.format('<sec>\n<title/>%s</sec>\n', data.body)
-  if data.back then data.back = fix_citeproc(data.back) end
+  add(body .. '</sec>\n</body>')
 
-  if (data['date-received'] or data['date-accepted']) then
-    data['history'] = true
+  -- then add references into back section
+  if back or #notes > 0 then
+    add('<back>')
+    back = fix_citeproc(back)
+
+    -- also add notes
+    if #notes > 0 then
+      add('<ol class="footnotes">')
+      for _,note in pairs(notes) do
+        add(note)
+      end
+      add('</ol>')
+    end
+
+    add(back .. '\n</back>\n')
   end
 
-  -- parse template
-  template = read_file('default.jats')
-  result = template and fill_template(template, data) or ''
-  return result
+  return table.concat(buffer,'\n')
 end
+
+-- function Doc(body, metadata, variables)
+
+--   if (metadata['date-received'] or metadata['date-accepted']) then
+--     metadata['history'] = true
+--   end
+
+--   -- create date objects
+--   dates = { 'pub-date', 'date-received', 'date-accepted' }
+--   for _,d in ipairs(dates) do metadata[d] = date_helper(metadata[d]) end
+
+--   -- create affiliation objects
+--   --data = affiliation_helper(data)
+
+--   -- create corresponding author objects
+--   --data = corresp_helper(data)
+
+-- end
 
 -- Blocksep is used to separate block elements.
 function Blocksep()
@@ -467,18 +414,17 @@ function DefinitionList(items)
 end
 
 function Div(s, attr)
-  if attr.class and string.match(' ' .. attr.class .. ' ',' references ') then
+  if attr.class and string.match(' ' .. attr.class .. ' ',' references ') and s ~= '' then
     s = s:gsub("<p>(.-)</p>", '%1')
-    return '<ref-list>\n<title>References</title>\n' .. s .. '\n</ref-list>'
-  else
-    return s
+    s = '<sec><title>References</title>\n<ref-list>\n' .. s .. '\n</ref-list>\n</sec>'
   end
+  return s
 end
 
 -- inline elements
 
 function Str(s)
-  return s
+  return escape(s)
 end
 
 function Space()
@@ -576,3 +522,14 @@ end
 function Span(s, attr)
   return s
 end
+
+-- The following code will produce runtime warnings when you haven't defined
+-- all of the functions you need for the custom writer, so it's useful
+-- to include when you're working on a writer.
+local meta = {}
+meta.__index =
+  function(_, key)
+    io.stderr:write(string.format("WARNING: Undefined function '%s'\n",key))
+    return function() return "" end
+  end
+setmetatable(_G, meta)

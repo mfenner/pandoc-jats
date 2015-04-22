@@ -2,6 +2,8 @@
 layout: post
 title: "Nine simple ways to make it easier to (re)use your data"
 tags: [example, citation]
+bibliography: examples/example.bib
+csl: examples/jats.csl
 author:
  - surname: White
    given-names: Ethan P.
