@@ -11,7 +11,7 @@ To convert the markdown file `example1.md` into the JATS XML file `example1.xml`
 
 ```
 pandoc examples/example1.md --filter pandoc-citeproc -t jats.lua -o example1.xml --template=default.jats --bibliography=examples/example.bib --csl=examples/jats
-```
+``
 
 ### Template
 `pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates) (e.g. if/end conditions, for/end loops, and a dot can be used to select a field of a variable that takes an object),
@@ -261,7 +261,7 @@ The metadata required for JATS can be stored in a YAML metadata block (new in Pa
       link: http://creativecommons.org/licenses/by/3.0/
     ---
 
-The `article` and `journal` sections correspond to `<article-meta>` and `<journal-meta>` in JATS.
+The `article` and `journal` sections correspond to `<article-meta>` and `<journal-meta>` in JATS. The standard Pandoc metadata `title`, `author` and `date` are supported.
 
 ### Validation
 The JATS XML should be validated, for example with the excellent [jats-conversion](https://github.com/PeerJ/jats-conversion) tools written by Alf Eaton.
@@ -269,6 +269,7 @@ The JATS XML should be validated, for example with the excellent [jats-conversio
 ### To Do
 * supported for latest JATS version (1.1d3 in April 2015)
 * parsing for references in Lua instead of using a CSL style
+* more testing
 
 ### Feedback
 This tool needs extensive testing with as many markdown documents as possible. Please open an issue in the [Issue Tracker](https://github.com/mfenner/pandoc-jats/issues) if you find a conversion problem.
