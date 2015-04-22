@@ -1,7 +1,7 @@
 pandoc-jats
 ===========
 
-A Lua [custom writer for Pandoc](http://johnmacfarlane.net/pandoc/README.html#custom-writers) generating **JATS XML** - specifically [Journal Publishing Tag Library NISO JATS Version 1.0](http://jats.nlm.nih.gov/publishing/tag-library/1.0/index.html).
+A Lua [custom writer for Pandoc](http://johnmacfarlane.net/pandoc/README.html#custom-writers) generating **JATS XML** - specifically [Journal Publishing Tag Library NISO JATS Version 1.1d3](http://jats.nlm.nih.gov/publishing/tag-library/1.1d3/index.html).
 
 ### Installation
 Just download the file `JATS.lua` and put it in a convenient location. Pandoc includes a lua interpreter, so lua need not be installed separately. You need at least Pandoc version 1.13, released August 2014 (this release adds `--template` support for custom writers).
