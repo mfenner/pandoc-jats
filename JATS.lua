@@ -210,6 +210,12 @@ function html_align(align)
   end
 end
 
+-- remove unsupported tags
+function clean_tags(s)
+  s = s:gsub('<br/>','')
+  return s
+end
+
 -- Table to store footnotes, so they can be included at the end.
 local notes = {}
 
@@ -227,6 +233,9 @@ function Doc(body, metadata, variables)
 
   add('<body>\n')
   add('<sec>\n<title/>\n')
+
+  -- remove unsupported tags
+  body = clean_tags(body)
 
   -- split of references that go into back section
   -- first detect references
@@ -360,6 +369,10 @@ function Table(caption, aligns, widths, headers, rows)
   local empty_header = true
   for i, h in pairs(headers) do
     local align = html_align(aligns[i])
+
+    -- remove <p> tag
+    h = h:gsub("^<p>(.-)</p>", "%1")
+
     table.insert(header_row,'<th align="' .. align .. '">' .. h .. '</th>')
     empty_header = empty_header and h == ""
   end
