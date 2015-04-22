@@ -294,4 +294,4 @@ busted
 The tests in `spec/input_spec.lua` are generic and can be reused for other custom Lua writers. They currently test whether all functions called by Pandoc exist. To run these tests against the `sample.lua` custom writer included with Pandoc, do `busted spec/sample_spec.lua`.
 
 ### License
-© 2013-2015 Martin Fenner. Released under the [GPL]((http://www.gnu.org/copyleft/gpl.html), version 2 or greater. See LICENSE for more info.
+© 2013-2015 Martin Fenner. Released under the [GPL](http://www.gnu.org/copyleft/gpl.html), version 2 or greater. See LICENSE for more info.
