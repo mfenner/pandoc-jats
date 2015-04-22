@@ -11,7 +11,7 @@ To convert the markdown file `example1.md` into the JATS XML file `example1.xml`
 
 ```
 pandoc examples/example1.md --filter pandoc-citeproc -t jats.lua -o example1.xml --template=default.jats --bibliography=examples/example.bib --csl=examples/jats
-``
+```
 
 ### Template
 `pandoc-jats` uses the template `default.jats` - the template uses the same format as other [Pandoc templates](https://github.com/jgm/pandoc-templates) (e.g. if/end conditions, for/end loops, and a dot can be used to select a field of a variable that takes an object),
@@ -226,40 +226,42 @@ $endif$
 ### Metadata
 The metadata required for JATS can be stored in a YAML metadata block (new in Pandoc 1.12, the same format is also used by the Jekyll static blog generator. An example [from a recent blog post](http://blog.martinfenner.org/2013/12/11/what-can-article-level-metrics-do-for-you/) is below:
 
-    --
-    layout: post
-    title: "What Can Article Level Metrics Do for You?"
-    date: 2013-10-22
-    tags: [example, markdown, article-level metrics, reproducibility]
-    bibliography: examples/example.bib
-    csl: examples/jats.csl
-    article:
-      type: research-article
-      publisher-id: PBIOLOGY-D-13-03338
-      doi: 10.1371/journal.pbio.1001687
-      heading: Essay
-    journal:
-      publisher-id: plos
-      publisher-name: Public Library of Science
-      publisher-loc: San Francisco, USA
-      nlm-ta: PLoS Biol
-      pmc: plosbiol
-      title: PLoS Biology
-      eissn: 1545-7885
-      pissn: 1544-9173
-    author:
-     - surname: Fenner
-       given-names: Martin
-       orcid: http://orcid.org/0000-0003-1419-2405
-       email: mfenner@plos.org
-       corresp: true
-    copyright:
-      holder: Martin Fenner
-      year: 2013
-      text: "This is an open-access article distributed under the terms of the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited."
-      type: open-access
-      link: http://creativecommons.org/licenses/by/3.0/
-    ---
+```
+---
+layout: post
+title: "What Can Article Level Metrics Do for You?"
+date: 2013-10-22
+tags: [example, markdown, article-level metrics, reproducibility]
+bibliography: examples/example.bib
+csl: examples/jats.csl
+article:
+  type: research-article
+  publisher-id: PBIOLOGY-D-13-03338
+  doi: 10.1371/journal.pbio.1001687
+  heading: Essay
+journal:
+  publisher-id: plos
+  publisher-name: Public Library of Science
+  publisher-loc: San Francisco, USA
+  nlm-ta: PLoS Biol
+  pmc: plosbiol
+  title: PLoS Biology
+  eissn: 1545-7885
+  pissn: 1544-9173
+author:
+ - surname: Fenner
+   given-names: Martin
+   orcid: http://orcid.org/0000-0003-1419-2405
+   email: mfenner@plos.org
+   corresp: true
+copyright:
+  holder: Martin Fenner
+  year: 2013
+  text: "This is an open-access article distributed under the terms of the Creative Commons Attribution License, which permits unrestricted use, distribution, and reproduction in any medium, provided the original author and source are credited."
+  type: open-access
+  link: http://creativecommons.org/licenses/by/3.0/
+---
+```
 
 The `article` and `journal` sections correspond to `<article-meta>` and `<journal-meta>` in JATS. The standard Pandoc metadata `title`, `author` and `date` are supported.
 
