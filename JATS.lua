@@ -132,6 +132,27 @@ function parse_yaml(s)
   return c
 end
 
+-- add appropriate sec-type attribute
+function section_helper(s)
+  if s == 'Conclusions' then
+    return 'conclusions'
+  elseif s == 'Discussion' then
+    return 'discussion'
+  elseif s == 'Introduction' then
+    return 'intro'
+  elseif s == 'Materials and Methods' then
+    return 'materials|methods'
+  elseif s == 'Results' then
+    return 'results'
+  elseif s == 'Acknowledgments' then
+    return 'acknowledgments'
+  elseif s == 'Supporting Information' then
+    return 'supplementary-material'
+  else
+    return nil
+  end
+end
+
 -- Create table with year, month, day and iso8601-formatted date
 -- Input is iso8601-formatted date as string
 -- Return nil if input is not a valid date
@@ -210,14 +231,11 @@ function html_align(align)
   end
 end
 
--- remove unsupported tags
-function clean_tags(s)
-  s = s:gsub('<br/>','')
-  return s
-end
-
 -- Table to store footnotes, so they can be included at the end.
 local notes = {}
+
+-- Table to store headers
+local headers = {}
 
 -- This function is called once for the whole document. Parameters:
 -- body is a string, metadata is a table, variables is a table.
@@ -231,11 +249,8 @@ function Doc(body, metadata, variables)
     table.insert(buffer, s)
   end
 
-  add('<body>\n')
-  add('<sec>\n<title/>\n')
-
-  -- remove unsupported tags
-  body = clean_tags(body)
+  -- strip closing section tag at beginning
+  body = string.gsub(body, "^</sec>%s(.-)", "%1")
 
   -- split of references that go into back section
   -- first detect references
@@ -245,23 +260,13 @@ function Doc(body, metadata, variables)
     back = body:sub(offset)
     body = body:sub(1, offset - 1)
   end
-  add(body .. '</sec>\n</body>')
 
-  -- then add references into back section
-  if back or #notes > 0 then
-    add('<back>')
+  add('<body>\n' .. body .. '</sec>\n</body>')
+
+  -- then add them to back section
+  if back then
     back = fix_citeproc(back)
-
-    -- also add notes
-    if #notes > 0 then
-      add('<ol class="footnotes">')
-      for _,note in pairs(notes) do
-        add(note)
-      end
-      add('</ol>')
-    end
-
-    add(back .. '\n</back>\n')
+    add('<back>' .. back .. '\n</back>\n')
   end
 
   return table.concat(buffer,'\n')
@@ -326,15 +331,33 @@ end
 
 -- lev is an integer, the header level.
 function Header(lev, s, attr)
-  if attr.id and string.match(' ' .. attr.id .. ' ',' references ') then
-    return ''
-  elseif attr.id then
-    return '</sec>\n<sec id="' .. attr.id .. '">\n' ..
-           '<title>' .. s .. '</title>'
-  else
-    return '</sec>\n<sec>\n' ..
-           '<title>' .. s .. '</title>'
+  local last = headers[#headers]
+  local h = last and last.h or {}
+  h[lev] = (h[lev] or 0) + 1
+  for i = lev + 1, #headers do
+    table.remove(h, i)
   end
+
+  local header = { ['h'] = h,
+                   ['title'] = s,
+                   ['id'] = table.concat(h,'.'),
+                   ['sec-type'] = section_helper(s) }
+
+  table.insert(headers, header)
+  local attr = { ['id'] = header['id'], ['sec-type'] = header['sec-type'] }
+
+  return '</sec>\n<sec' .. attributes(attr) .. '>\n<title>' .. s .. '</title>'
+end
+
+function Note(s)
+  local num = #notes + 1
+  -- insert the back reference right before the final closing tag.
+  s = s:gsub('(.*)</', '%1 <a href="#fnref' .. num ..  '">&#8617;</a></')
+  -- add a list item with the note to the note table.
+  table.insert(notes, '<fn id="fn' .. num .. '">' .. s .. '</fn>')
+  -- return the footnote reference, linked to the note.
+  return '<a id="fnref' .. num .. '" href="#fn' .. num ..
+            '"><sup>' .. num .. '</sup></a>'
 end
 
 function CodeBlock(s, attr)
@@ -429,7 +452,7 @@ end
 function Div(s, attr)
   if attr.class and string.match(' ' .. attr.class .. ' ',' references ') and s ~= '' then
     s = s:gsub("<p>(.-)</p>", '%1')
-    s = '<sec><title>References</title>\n<ref-list>\n' .. s .. '\n</ref-list>\n</sec>'
+    s = '<sec sec-type="references"><title>References</title>\n<ref-list>\n' .. s .. '\n</ref-list>\n</sec>'
   end
   return s
 end
@@ -501,15 +524,16 @@ function RawInline(format, s)
 end
 
 function LineBreak()
-  return "<br/>"
+  return ' '
 end
 
 function Link(s, src, tit)
   -- TODO: disable parsing of links in the bibliography
-  return s
-  -- else
-  --   return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
-  -- end
+  if src ~= '' and s ~= '' then
+    return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
+  else
+    return s
+  end
 end
 
 function Image(src, tit, s)
@@ -532,8 +556,15 @@ function Note(s)
             '"><sup>' .. num .. '</sup></a>'
 end
 
+-- handle bold and italic
 function Span(s, attr)
-  return s
+  if attr.style == "font-weight:bold" then
+    return Strong(s)
+  elseif attr.style == "font-style:italic" then
+    return Emph(s)
+  else
+    return s
+  end
 end
 
 -- The following code will produce runtime warnings when you haven't defined
