@@ -21,6 +21,86 @@ describe("custom writer functions", function()
 
 end)
 
+describe("xml builder", function()
+  it("should build XML entities", function()
+    local result = xml('p', 'Some text')
+    expected = '<p>Some text</p>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build self closing elements", function()
+    local result = xml('hr')
+    expected = '<hr/>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should include attributes", function()
+    local result = xml('div', 'Some text', { ['id'] = 'results' })
+    expected = '<div id="results">Some text</div>'
+    assert.are.same(result, expected)
+  end)
+end)
+
+describe("sections", function()
+  it("should build header", function()
+    local result = Header(2, 'Discussion')
+    expected = '</sec>\n<sec lev="2">\n<title>Discussion</title>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build section", function()
+    local result = Section(2, 'Some text in the discussion.', 'Discussion', { ['sec-type'] = 'discussion' })
+    expected = '<sec id="sec-1" sec-type="discussion"><title>Discussion</title>Some text in the discussion.</sec>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build ack", function()
+    local result = Ack('We thank our sponsors.')
+    expected = '<ack>We thank our sponsors.</ack>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build supplementary material", function()
+    local result = SupplementaryMaterial('Detailed information about the experiment.', 'S4')
+    expected = '<supplementary-material><caption><title>S4</title>Detailed information about the experiment.</caption></supplementary-material>'
+    assert.are.same(result, expected)
+  end)
+end)
+
+describe("references", function()
+  it("should insert references", function()
+    local result = Ref('<ref></ref>')
+    expected = 1
+    assert.are.same(result, expected)
+  end)
+end)
+
+describe("custom tags", function()
+  it("Section", function()
+    assert.is_true(type(Section) == 'function')
+  end)
+
+  it("RefList", function()
+    assert.is_true(type(RefList) == 'function')
+  end)
+
+  it("Ref", function()
+    assert.is_true(type(Ref) == 'function')
+  end)
+
+  it("SupplementaryMaterial", function()
+    assert.is_true(type(SupplementaryMaterial) == 'function')
+  end)
+
+  it("Ack", function()
+    assert.is_true(type(Ack) == 'function')
+  end)
+
+  it("Glossary", function()
+    assert.is_true(type(Glossary) == 'function')
+  end)
+end)
+
 describe("flatten", function()
 
   it("flatten_table", function()
