@@ -7,7 +7,7 @@ description: ""
 category:
 tags: [markdown]
 bibliography: examples/example.bib
-csl: examples/jats.csl
+csl: jats.csl
 ---
 Following up from [my post last
 week](/2012/12/13/a-call-for-scholarly-markdown/),

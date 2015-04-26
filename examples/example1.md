@@ -4,7 +4,7 @@ title: "What Can Article Level Metrics Do for You?"
 date: 2013-10-22
 tags: [molecular biology, cancer]
 bibliography: examples/example.bib
-csl: examples/jats.csl
+csl: jats.csl
 article:
   type: research-article
   publisher-id: PBIOLOGY-D-13-03338
@@ -36,17 +36,6 @@ copyright:
   type: open-access
   link: http://creativecommons.org/licenses/by/3.0/
 ---
-*Article-level metrics (ALMs) provide a wide range of metrics about the
-uptake of an individual journal article by the scientific community
-after publication. They include citations, usage statistics, discussions
-in online comments and social media, social bookmarking, and
-recommendations. In this essay, we describe why article-level metrics
-are an important extension of traditional citation-based journal metrics
-and provide a number of example from ALM data collected for PLOS
-Biology.*
-
-> This is an open-access article distributed under the terms of the Creative Commons Attribution License, authored by me and [originally published Oct 22, 2013 in PLOS Biology](http://dx.doi.org/10.1371/journal.pbio.1001687).
-
 The scientific impact of a particular piece of research is reflected in
 how this work is taken up by the scientific community. The first
 systematic approach that was used to assess impact, based on the
@@ -69,7 +58,6 @@ times, and two articles [@Narendra:2010fw; @Dickson:2010ix] more than
 essay, and the dataset is available in the supporting information (**Data
 S1**). Similar data are available for an increasing
 number of other publications and organizations.
-
 
 ```r
 # code for figure 1: density plots for citation counts for PLOS Biology

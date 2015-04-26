@@ -2,7 +2,7 @@
 -- that tries to conform to the JATS 1.0 specification
 -- http://jats.nlm.nih.gov/archiving/tag-library/1.0/index.html
 --
--- Invoke with: pandoc -t JATS.lua
+-- Invoke with: pandoc -t jats.lua
 --
 -- Note:  you need not have lua installed on your system to use this
 -- custom writer.  However, if you do have lua installed, you can
@@ -132,25 +132,53 @@ function parse_yaml(s)
   return c
 end
 
+local meta = {}
+
 -- add appropriate sec-type attribute
-function section_helper(s)
-  if s == 'Conclusions' then
-    return 'conclusions'
-  elseif s == 'Discussion' then
-    return 'discussion'
-  elseif s == 'Introduction' then
-    return 'intro'
-  elseif s == 'Materials and Methods' then
-    return 'materials|methods'
-  elseif s == 'Results' then
-    return 'results'
-  elseif s == 'Acknowledgments' then
-    return 'acknowledgments'
-  elseif s == 'Supporting Information' then
-    return 'supplementary-material'
+function sec_type_helper(s)
+  local map = { ['Abstract']= 'abstract',
+                ['Acknowledgments']= 'acknowledgements',
+                ['Author Summary']= 'author-summary',
+                ['Conclusions'] = 'conclusions',
+                [meta['title']] = 'main',
+                ['Discussion'] = 'discussion',
+                ['Glossary'] = 'glossary',
+                ['Introduction'] = 'intro',
+                ['Materials and Methods'] = 'materials|methods',
+                ['Notes'] = 'notes',
+                ['References']= 'references',
+                ['Results']= 'results',
+                ['Supporting Information']= 'supplementary-material' }
+  return map[s]
+end
+
+-- Tables to store headers, sections, back sections, references and figures
+local headers = {}
+local sections = {}
+local back = {}
+local references = {}
+local figures = {}
+
+function section_helper(lev, s, title)
+  local attr = { ['sec-type'] = sec_type_helper(title) }
+
+  if attr['sec-type'] == "acknowledgements" then
+    table.insert(back, Ack(s, title))
+  elseif attr['sec-type'] == "references" then
+    table.insert(back, RefList(s, title))
+  elseif attr['sec-type'] == "notes" then
+    table.insert(back, Note(s, title))
+  elseif attr['sec-type'] == "glossary" then
+    table.insert(back, Glossary(s, title))
+  elseif attr['sec-type'] == "abstract" or attr['sec-type'] == "author-summary" then
+    -- discard, should be provided via metadata
+  elseif attr['sec-type'] == "supplementary-material" then
+    table.insert(sections, SupplementaryMaterial(s, title))
   else
-    return nil
+    table.insert(sections, Section(lev, s, title, attr))
   end
+
+  return attr
 end
 
 -- Create table with year, month, day and iso8601-formatted date
@@ -234,9 +262,6 @@ end
 -- Table to store footnotes, so they can be included at the end.
 local notes = {}
 
--- Table to store headers
-local headers = {}
-
 -- This function is called once for the whole document. Parameters:
 -- body is a string, metadata is a table, variables is a table.
 -- This gives you a fragment.  You could use the metadata table to
@@ -244,32 +269,26 @@ local headers = {}
 -- to pandoc, and pandoc will do the template processing as
 -- usual.
 function Doc(body, metadata, variables)
-  local buffer = {}
-  local function add(s)
-    table.insert(buffer, s)
+  meta = metadata
+
+  -- if document doesn't start with section, add top-level section without title
+  if string.sub(body, 1, 6) ~= '</sec>' then
+    body = Header(1, '') .. '\n' .. body
   end
 
-  -- strip closing section tag at beginning
-  body = string.gsub(body, "^</sec>%s(.-)", "%1")
+  -- strip closing section tag from beginning, add to end of document
+  body = string.sub(body, 7) .. '</sec>'
 
-  -- split of references that go into back section
-  -- first detect references
-  local offset = body:find('<sec><title>References')
-  local back = nil
-  if offset then
-    back = body:sub(offset)
-    body = body:sub(1, offset - 1)
+  -- parse sections, turn body into table of sections
+  for lev, title, content in string.gmatch(body, '<sec.-lev="(.-)".->%s<title>(.-)</title>(.-)</sec>') do
+    attr = section_helper(tonumber(lev), content, title)
   end
 
-  add('<body>\n' .. body .. '</sec>\n</body>')
+  -- combine sections
+  body = '<body>\n' .. table.concat(sections) .. '</body>\n' ..
+         '<back>\n' .. table.concat(back) .. '</back>\n'
 
-  -- then add them to back section
-  if back then
-    back = fix_citeproc(back)
-    add('<back>' .. back .. '\n</back>\n')
-  end
-
-  return table.concat(buffer,'\n')
+  return body
 end
 
 -- function Doc(body, metadata, variables)
@@ -292,7 +311,7 @@ end
 
 -- Blocksep is used to separate block elements.
 function Blocksep()
-  return "\n\n"
+  return "\n"
 end
 
 -- The functions that follow render corresponding pandoc elements.
@@ -305,15 +324,6 @@ end
 
 function Plain(s)
   return s
-end
-
-function CaptionedImage(src, tit, s)
-  -- if s begins with <bold> text, make it the <title>
-  s = string.gsub('<p>' .. s, "^<p><bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
-  return '<fig>\n' ..
-         '<caption>\n' .. s .. '</p>\n</caption>\n' ..
-         "<graphic mimetype='image' xlink:href='".. escape(src) .. "' xlink:type='simple'/>\n" ..
-         '</fig>'
 end
 
 function Para(s)
@@ -331,22 +341,9 @@ end
 
 -- lev is an integer, the header level.
 function Header(lev, s, attr)
-  local last = headers[#headers]
-  local h = last and last.h or {}
-  h[lev] = (h[lev] or 0) + 1
-  for i = lev + 1, #headers do
-    table.remove(h, i)
-  end
-
-  local header = { ['h'] = h,
-                   ['title'] = s,
-                   ['id'] = table.concat(h,'.'),
-                   ['sec-type'] = section_helper(s) }
-
-  table.insert(headers, header)
-  local attr = { ['id'] = header['id'], ['sec-type'] = header['sec-type'] }
-
-  return '</sec>\n<sec' .. attributes(attr) .. '>\n<title>' .. s .. '</title>'
+  attr = attr or {}
+  attr['lev'] = '' .. lev
+  return '</sec>\n<sec' .. attributes(attr) .. '>\n' .. '<title>' .. s .. '</title>'
 end
 
 function Note(s)
@@ -376,7 +373,7 @@ function Table(caption, aligns, widths, headers, rows)
   local function add(s)
     table.insert(buffer, s)
   end
-  table.insert(buffer, '<table-wrap>\n')
+  table.insert(buffer, '<table-wrap>')
   if caption ~= "" then
     -- if caption begins with <bold> text, make it the <title>
     caption = string.gsub('<p>' .. caption, "^<p><bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
@@ -437,7 +434,7 @@ function OrderedList(items)
   return '<list list-type="order">\n' .. table.concat(buffer, '\n') .. '\n</list>'
 end
 
--- Revisit association list STackValue instance.
+-- Revisit association list StackValue instance.
 function DefinitionList(items)
   local buffer = {}
   for _,item in pairs(items) do
@@ -451,10 +448,72 @@ end
 
 function Div(s, attr)
   if attr.class and string.match(' ' .. attr.class .. ' ',' references ') and s ~= '' then
-    s = s:gsub("<p>(.-)</p>", '%1')
-    s = '<sec sec-type="references"><title>References</title>\n<ref-list>\n' .. s .. '\n</ref-list>\n</sec>'
+    return Header(2, "References", attr) .. '\n' .. s:gsub("<p>(.-)</p>", "%1")
+  else
+    return s
   end
-  return s
+end
+
+-- custom block elements for JATS
+
+-- section is generated after header to allow reordering
+function Section(lev, s, title, attr)
+  local last = headers[#headers]
+  local h = last and last.h or {}
+  h[lev] = (h[lev] or 0) + 1
+  for i = lev + 1, #headers do
+    table.remove(h, i)
+  end
+
+  local header = { ['h'] = h,
+                   ['title'] = title,
+                   ['id'] = 'sec-' .. table.concat(h,'.'),
+                   ['sec-type'] = attr['sec-type'] }
+
+  table.insert(headers, header)
+
+  attr = { ['id'] = header['id'], ['sec-type'] = header['sec-type'] }
+  title = title ~= '' and '<title>' .. title .. '</title>' or '<title/>'
+
+  return '<sec' .. attributes(attr) .. '>\n' .. title .. s .. '</sec>\n'
+end
+
+function SupplementaryMaterial(s, title, attr)
+  attr = {}
+  return '<supplementary-material' .. attributes(attr) .. '>\n' ..
+         '<caption>\n<title>' .. title .. '</title>' .. s .. '</caption>\n' ..
+         '</supplementary-material>\n'
+end
+
+function Ack(s, title)
+  return '<ack>\n<title>' .. title .. '</title>' .. s .. '</ack>\n'
+end
+
+function Glossary(s, title, attr)
+  return '<glossary' .. attributes(attr) .. '>\n<title>' .. title .. '</title>' .. s .. '</glossary>\n'
+end
+
+function RefList(s, title)
+  s = fix_citeproc(s)
+
+  -- format ids
+  s = string.gsub(s, '<ref id="(%d+)">', function (r)
+        return '<ref id="' .. string.format('r%03d', tonumber(r)) .. '">'
+      end)
+
+  for ref in string.gmatch(s, '(<ref.-</ref>)') do
+    Ref(ref)
+  end
+
+  if #references > 0 then
+    return '<ref-list>\n<title>' .. title .. '</title>\n' .. table.concat(references, '\n') .. '\n</ref-list>\n'
+  else
+    return ''
+  end
+end
+
+function Ref(s)
+  table.insert(references, s)
 end
 
 -- inline elements
@@ -499,12 +558,14 @@ function DoubleQuoted(s)
   return '"' .. s .. '"'
 end
 
+-- format in-text citation, ignore CSL
 function Cite(s)
-  cite_table = {};
-  for m in (s .. ','):gmatch('(.-)' .. ',') do
-    table.insert(cite_table, string.format('<xref ref-type="bibr" rid="%s">%s</xref>', m, m))
+  local ids = {}
+  for id in string.gmatch(s, '([^,]+)') do
+    local rid = string.format("r%03d", tonumber(id))
+    table.insert(ids, '<xref ref-type="bibr" rid="' .. rid .. '">[' .. id .. ']</xref>')
   end
-  return table.concat(cite_table)
+  return table.concat(ids)
 end
 
 function Code(s, attr)
@@ -528,7 +589,6 @@ function LineBreak()
 end
 
 function Link(s, src, tit)
-  -- TODO: disable parsing of links in the bibliography
   if src ~= '' and s ~= '' then
     return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
   else
@@ -536,13 +596,21 @@ function Link(s, src, tit)
   end
 end
 
-function Image(src, tit, s)
-  -- if s begins with <bold> text, make it the <title>
-  s = string.gsub('<p>' .. s, "^<bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
-  return '<fig>\n' ..
-         '<caption>\n' .. s .. '</p>\n</caption>\n' ..
-         "<graphic mimetype='image' xlink:href='".. escape(src) .. "' xlink:type='simple'/>\n" ..
-         '</fig>'
+function CaptionedImage(src, s, title)
+  -- if title begins with <bold> text, make it the <title>
+  title = string.gsub(title, "^<bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
+  local num = #figures + 1
+  local fig = '<fig id="fig-' .. num .. '">\n' ..
+              '<caption>\n' .. title .. '</p>\n</caption>\n' ..
+              Image(s, src, '') ..
+              '</fig>'
+  table.insert(figures, fig)
+  return fig
+end
+
+function Image(s, src, title)
+  local attr = { ['xlink:href'] = escape(src), ['xlink:title'] = escape(title) }
+  return '<graphic mimetype="image"' .. attributes(attr) .. ' position="float" xlink:type="simple"/>'
 end
 
 function Note(s)

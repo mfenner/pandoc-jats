@@ -15,7 +15,7 @@
     <category field="medicine"/>
     <category field="biology"/>
     <summary>Use this style to generate bibliographic data in Journal Article Tagging Suite (JATS) 1.0 XML format</summary>
-    <updated>2013-12-26T17:02:43+00:00</updated>
+    <updated>2015-04-26T17:02:43+00:00</updated>
     <rights license="http://creativecommons.org/licenses/by-sa/3.0/">This work is licensed under a Creative Commons Attribution-ShareAlike 3.0 License</rights>
   </info>
   <locale xml:lang="en">
@@ -23,8 +23,8 @@
       <term name="et-al">&lt;etal/&gt;</term>
     </terms>
   </locale>
-  <macro name="citation-number">
-    <text variable="citation-number" prefix="id=&quot;ref-" suffix="&quot;&gt;"/>
+  <macro name="citation-label">
+    <text variable="citation-number" prefix="id=&quot;" suffix="&quot;&gt;"/>
     <text variable="citation-number" prefix="&lt;label&gt;" suffix="&lt;/label&gt;"/>
   </macro>
   <macro name="author">
@@ -61,26 +61,17 @@
   <macro name="link">
     <choose>
       <if match="any" variable="DOI">
-        <group prefix="&lt;ext-link ext-link-type=&quot;doi&quot; " suffix="&lt;/ext-link&gt;">
-          <text variable="DOI" prefix="xlink:href=&quot;" suffix="&quot; xlink:type=&quot;simple&quot;&gt;"/>
-          <text variable="DOI"/>
-        </group>
+        <text variable="DOI" />
       </if>
     </choose>
     <choose>
       <if match="any" variable="PMID">
-        <group prefix="&lt;ext-link ext-link-type=&quot;pmid&quot; " suffix="&lt;/ext-link&gt;">
-          <text variable="PMID" prefix="xlink:href=&quot;http://www.ncbi.nlm.nih.gov/pubmed/" suffix="&quot; xlink:type=&quot;simple&quot;&gt;"/>
-          <text variable="PMID"/>
-        </group>
+        <text variable="PMID" />
       </if>
     </choose>
     <choose>
       <if variable="URL" match="any">
-        <group prefix="&lt;ext-link ext-link-type=&quot;uri&quot; " suffix="&lt;/ext-link&gt;">
-          <text variable="URL" prefix="xlink:href=&quot;" suffix="&quot; xlink:type=&quot;simple&quot;&gt;"/>
-          <text variable="URL"/>
-        </group>
+        <text variable="URL" />
       </if>
     </choose>
   </macro>
@@ -161,17 +152,14 @@
       <key variable="citation-number"/>
     </sort>
     <layout delimiter=",">
-      <group prefix="&lt;xref ref-type=&quot;bibr&quot; rid=&quot;" suffix="&lt;/xref&gt;">
-        <text variable="citation-number" prefix="ref-" suffix="&quot;&gt;"/>
-        <text variable="citation-number"/>
-      </group>
+      <text variable="citation-number"/>
     </layout>
   </citation>
   <bibliography sort-separator="">
     <layout>
       <group prefix="&lt;ref " suffix="&lt;/ref&gt;">
-        <text macro="citation-number"/>
-        <group prefix="&lt;element-citation" suffix="&lt;/element-citation&gt;">
+        <text macro="citation-label" suffix="&#10;"/>
+        <group prefix="&lt;element-citation" suffix="&lt;/element-citation&gt;&#10;">
           <text macro="publication-type"/>
           <text macro="author" prefix="&lt;person-group person-group-type=&quot;author&quot;&gt;" suffix="&lt;/person-group&gt;"/>
           <text macro="title" prefix="&lt;article-title&gt;" suffix="&lt;/article-title&gt;"/>
