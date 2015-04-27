@@ -1,7 +1,7 @@
 local inspect = require 'inspect'
 require("../jats")
 
-describe("custom writer functions", function()
+describe("custom xml functions", function()
   it("should escape XML entities", function()
     local result = escape('<')
     local expected = '&lt;'
@@ -14,20 +14,20 @@ describe("custom writer functions", function()
     assert.are.same(result, expected)
   end)
 
-  it("function read_file exists", function()
-    assert.is_true(type(read_file) == 'function')
-  end)
-end)
-
-describe("Doc", function()
-  it("should build the body", function()
-    local result = Doc('This is a test.')
-    expected = '<body>\n<sec id="sec-1">\n<title/>\nThis is a test.</sec>\n</body>'
+  it("should write attributes", function()
+    local attr = { ['id'] = 'sec-1.4', ['sec-type'] = 'results' }
+    local result = attributes(attr)
+    expected = ' id="sec-1.4" sec-type="results"'
     assert.are.same(result, expected)
   end)
-end)
 
-describe("xml builder", function()
+  it("should write empty attributes", function()
+    local attr = {}
+    local result = attributes(attr)
+    expected = ''
+    assert.are.same(result, expected)
+  end)
+
   it("should build XML entities", function()
     local result = xml('p', 'Some text')
     expected = '<p>Some text</p>'
@@ -47,7 +47,38 @@ describe("xml builder", function()
   end)
 end)
 
+describe("Doc", function()
+  it("should build the body", function()
+    local result = Doc('This is a test.')
+    expected = '<body>\n<sec id="sec-1">\n<title/>\nThis is a test.</sec>\n</body>'
+    assert.are.same(result, expected)
+  end)
+end)
+
 describe("sections", function()
+  it("should find sections", function()
+    local result = sec_type_helper('Discussion')
+    expected = 'discussion'
+    assert.are.same(result, expected)
+  end)
+
+  it("should ignore unknown sections", function()
+    local result = sec_type_helper('Report')
+    assert.is.falsy(result)
+  end)
+
+  it("should generate section", function()
+    local result = section_helper(2, 'Some text in the discussion.', 'Discussion')
+    expected = { ['sec-type'] = 'discussion' }
+    assert.are.same(result, expected)
+  end)
+
+  it("should generate acknowledgements", function()
+    local result = section_helper(2, 'We thank our sponsors.', 'Acknowledgements')
+    expected = {}
+    assert.are.same(result, expected)
+  end)
+
   it("should build header", function()
     local result = Header(2, 'Discussion')
     expected = '</sec>\n<sec lev="2">\n<title>Discussion</title>'
@@ -56,7 +87,7 @@ describe("sections", function()
 
   it("should build section", function()
     local result = Section(2, 'Some text in the discussion.', 'Discussion', { ['sec-type'] = 'discussion' })
-    expected = '<sec id="sec-1.1" sec-type="discussion">\n<title>Discussion</title>Some text in the discussion.</sec>'
+    expected = '<sec id="sec-1.3" sec-type="discussion">\n<title>Discussion</title>Some text in the discussion.</sec>'
     assert.are.same(result, expected)
   end)
 
@@ -83,6 +114,24 @@ describe("references", function()
   it("should build links", function()
     local result = Link('PubMed', 'http://www.ncbi.nlm.nih.gov/pubmed/', '24 million citations for biomedical literature')
     expected = '<ext-link ext-link-type="uri" xlink:href="http://www.ncbi.nlm.nih.gov/pubmed/" xlink:title="24 million citations for biomedical literature" xlink:type="simple">PubMed</ext-link>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build cite", function()
+    local result = Cite('[7]')
+    expected = '<xref ref-type="bibr" rid="r007">[7]</xref>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build multiple cites", function()
+    local result = Cite('[7,8]')
+    expected = '<xref ref-type="bibr" rid="r007">[7]</xref><xref ref-type="bibr" rid="r008">[8]</xref>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should ignore cite keys", function()
+    local result = Cite('[@thorisson2011]')
+    expected = '[@thorisson2011]'
     assert.are.same(result, expected)
   end)
 end)
@@ -135,8 +184,27 @@ describe("custom tags", function()
   end)
 end)
 
-describe("flatten", function()
+describe("lists", function()
+  it("should build unordered list", function()
+    local result = BulletList({ 'A', 'B', 'C' })
+    expected = '<list list-type="bullet">\n<list-item>A</list-item>\n<list-item>B</list-item>\n<list-item>C</list-item>\n</list>'
+    assert.are.same(result, expected)
+  end)
 
+  it("should build ordered list", function()
+    local result = OrderedList({ 'A', 'B', 'C' })
+    expected = '<list list-type="order">\n<list-item>A</list-item>\n<list-item>B</list-item>\n<list-item>C</list-item>\n</list>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build definition list", function()
+    local result = DefinitionList({ { ['A'] = { 'This is A.' }}, { ['B'] = {'This is B.', 'This is also B.' }}, { ['C'] = { 'This is C.' }} })
+    expected = '<def-list>\n<def-item><term>A</term><def>This is A.</def></def-item>\n<def-item><term>B</term><def>This is B.</def><def>This is also B.</def></def-item>\n<def-item><term>C</term><def>This is C.</def></def-item>\n</def-list>'
+    assert.are.same(result, expected)
+  end)
+end)
+
+describe("flatten", function()
   it("flatten_table", function()
     assert.is_true(type(flatten_table) == 'function')
   end)
@@ -171,7 +239,6 @@ describe("flatten", function()
 end)
 
 describe("date_helper", function()
-
   it("function exists", function()
     assert.is_true(type(date_helper) == 'function')
   end)
@@ -189,11 +256,15 @@ describe("date_helper", function()
     local result = date_helper(date)
     assert.are.same(result, expected)
   end)
+end)
 
+describe("handle files", function()
+  it("function read_file exists", function()
+    assert.is_true(type(read_file) == 'function')
+  end)
 end)
 
 describe("parse_yaml", function()
-
   it("function exists", function()
     assert.is_true(type(parse_yaml) == 'function')
   end)
@@ -254,5 +325,4 @@ describe("parse_yaml", function()
     local result = parse_yaml(config)
     assert.are.same(result, expected)
   end)
-
 end)
