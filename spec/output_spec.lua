@@ -55,6 +55,26 @@ describe("Doc", function()
   end)
 end)
 
+describe("Span", function()
+  it("should understand bold", function()
+    local result = Span('This is a test.', { ['style'] = "font-weight:bold" })
+    expected = '<bold>This is a test.</bold>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should understand italic", function()
+    local result = Span('This is a test.', { ['style'] = "font-style:italic" })
+    expected = '<italic>This is a test.</italic>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should understand small caps", function()
+    local result = Span('This is a test.', { ['style'] = "font-variant: small-caps" })
+    expected = '<sc>This is a test.</sc>'
+    assert.are.same(result, expected)
+  end)
+end)
+
 describe("sections", function()
   it("should find sections", function()
     local result = sec_type_helper('Discussion')
