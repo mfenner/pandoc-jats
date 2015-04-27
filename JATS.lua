@@ -12,6 +12,45 @@
 --
 -- Released under the GPL, version 2 or greater. See LICENSE for more info.
 
+-- Tables to store metadata, headers, sections, back sections, references, figures and footnotes
+local meta = {}
+local headers = {}
+local sections = {}
+local back = {}
+local references = {}
+local figures = {}
+
+-- This function is called once for the whole document. Parameters:
+-- body is a string, metadata is a table, variables is a table.
+-- This gives you a fragment.  You could use the metadata table to
+-- fill variables in a custom lua template.  Or, pass `--template=...`
+-- to pandoc, and pandoc will do the template processing as
+-- usual.
+function Doc(body, metadata, variables)
+  meta = metadata or {}
+
+  -- if document doesn't start with section, add top-level section without title
+  if string.sub(body, 1, 6) ~= '</sec>' then
+    body = Header(1, '') .. '\n' .. body
+  end
+
+  -- strip closing section tag from beginning, add to end of document
+  body = string.sub(body, 7) .. '</sec>'
+
+  -- parse sections, turn body into table of sections
+  for lev, title, content in string.gmatch(body, '<sec.-lev="(.-)".->%s<title>(.-)</title>(.-)</sec>') do
+    attr = section_helper(tonumber(lev), content, title)
+  end
+
+  body = xml('body', '\n' .. table.concat(sections, '\n') .. '\n')
+
+  if #back > 0 then
+    body = body .. '\n' .. xml('back', '\n' .. table.concat(back, '\n'))
+  end
+
+  return body
+end
+
 -- XML character entity escaping and unescaping
 function escape(s)
   local map = { ['<'] = '&lt;',
@@ -35,12 +74,34 @@ end
 -- a string that can be put into XML elements.
 function attributes(attr)
   local attr_table = {}
-  for x,y in pairs(attr) do
-    if y and y ~= "" then
+  for x, y in pairsByKeys(attr) do
+    if y and y ~= '' then
       table.insert(attr_table, string.format(' %s="%s"', x, escape(y)))
     end
   end
   return table.concat(attr_table)
+end
+
+-- sort table, so that attributes are in consistent order
+function pairsByKeys (t, f)
+  local a = {}
+  for n in pairs(t) do table.insert(a, n) end
+  table.sort(a, f)
+  local i = 0      -- iterator variable
+  local iter = function ()   -- iterator function
+    i = i + 1
+    if a[i] == nil then return nil
+    else return a[i], t[a[i]]
+    end
+  end
+  return iter
+end
+
+-- generic xml builder
+function xml(tag, s, attr)
+  attr = attr and attributes(attr) or ''
+  s = s and '>' .. s .. '</' .. tag .. '>' or '/>'
+  return '<' .. tag .. attr .. s
 end
 
 -- Flatten nested table, needed for nested YAML metadata['
@@ -132,15 +193,12 @@ function parse_yaml(s)
   return c
 end
 
-local meta = {}
-
 -- add appropriate sec-type attribute
 function sec_type_helper(s)
   local map = { ['Abstract']= 'abstract',
                 ['Acknowledgments']= 'acknowledgements',
                 ['Author Summary']= 'author-summary',
                 ['Conclusions'] = 'conclusions',
-                [meta['title']] = 'main',
                 ['Discussion'] = 'discussion',
                 ['Glossary'] = 'glossary',
                 ['Introduction'] = 'intro',
@@ -148,16 +206,10 @@ function sec_type_helper(s)
                 ['Notes'] = 'notes',
                 ['References']= 'references',
                 ['Results']= 'results',
-                ['Supporting Information']= 'supplementary-material' }
+                ['Supporting Information']= 'supplementary-material',
+                ['Supplementary Information']= 'supplementary-material' }
   return map[s]
 end
-
--- Tables to store headers, sections, back sections, references and figures
-local headers = {}
-local sections = {}
-local back = {}
-local references = {}
-local figures = {}
 
 function section_helper(lev, s, title)
   local attr = { ['sec-type'] = sec_type_helper(title) }
@@ -250,64 +302,10 @@ end
 -- Convert pandoc alignment to something HTML can use.
 -- align is AlignLeft, AlignRight, AlignCenter, or AlignDefault.
 function html_align(align)
-  if align == 'AlignRight' then
-    return 'right'
-  elseif align == 'AlignCenter' then
-    return 'center'
-  else
-    return 'left'
-  end
+  local map = { ['AlignRight']= 'right',
+                ['AlignCenter']= 'center' }
+  return map[align] or 'left'
 end
-
--- Table to store footnotes, so they can be included at the end.
-local notes = {}
-
--- This function is called once for the whole document. Parameters:
--- body is a string, metadata is a table, variables is a table.
--- This gives you a fragment.  You could use the metadata table to
--- fill variables in a custom lua template.  Or, pass `--template=...`
--- to pandoc, and pandoc will do the template processing as
--- usual.
-function Doc(body, metadata, variables)
-  meta = metadata
-
-  -- if document doesn't start with section, add top-level section without title
-  if string.sub(body, 1, 6) ~= '</sec>' then
-    body = Header(1, '') .. '\n' .. body
-  end
-
-  -- strip closing section tag from beginning, add to end of document
-  body = string.sub(body, 7) .. '</sec>'
-
-  -- parse sections, turn body into table of sections
-  for lev, title, content in string.gmatch(body, '<sec.-lev="(.-)".->%s<title>(.-)</title>(.-)</sec>') do
-    attr = section_helper(tonumber(lev), content, title)
-  end
-
-  -- combine sections
-  body = '<body>\n' .. table.concat(sections) .. '</body>\n' ..
-         '<back>\n' .. table.concat(back) .. '</back>\n'
-
-  return body
-end
-
--- function Doc(body, metadata, variables)
-
---   if (metadata['date-received'] or metadata['date-accepted']) then
---     metadata['history'] = true
---   end
-
---   -- create date objects
---   dates = { 'pub-date', 'date-received', 'date-accepted' }
---   for _,d in ipairs(dates) do metadata[d] = date_helper(metadata[d]) end
-
---   -- create affiliation objects
---   --data = affiliation_helper(data)
-
---   -- create corresponding author objects
---   --data = corresp_helper(data)
-
--- end
 
 -- Blocksep is used to separate block elements.
 function Blocksep()
@@ -327,42 +325,45 @@ function Plain(s)
 end
 
 function Para(s)
-  return "<p>" .. s .. "</p>"
+  return xml('p', s)
 end
 
 function RawBlock(s)
-  return "<preformat>" .. s .. "</preformat>"
+  return xml('preformat', s)
 end
 
 -- JATS restricts use to inside table cells (<td> and <th>)
 function HorizontalRule()
-  return "<hr/>"
+  return '<hr/>'
 end
 
 -- lev is an integer, the header level.
+-- we can't use closing tags, as we don't know the end of the section
 function Header(lev, s, attr)
   attr = attr or {}
   attr['lev'] = '' .. lev
-  return '</sec>\n<sec' .. attributes(attr) .. '>\n' .. '<title>' .. s .. '</title>'
+  return '</sec>\n<sec' .. attributes(attr) .. '>\n' .. xml('title', s)
 end
 
 function Note(s)
-  local num = #notes + 1
-  -- insert the back reference right before the final closing tag.
-  s = s:gsub('(.*)</', '%1 <a href="#fnref' .. num ..  '">&#8617;</a></')
-  -- add a list item with the note to the note table.
-  table.insert(notes, '<fn id="fn' .. num .. '">' .. s .. '</fn>')
-  -- return the footnote reference, linked to the note.
-  return '<a id="fnref' .. num .. '" href="#fn' .. num ..
-            '"><sup>' .. num .. '</sup></a>'
+  return s
 end
 
 function CodeBlock(s, attr)
-  return '<preformat>' .. escape(s) .. '</preformat>'
+  -- If code block has class 'dot', pipe the contents through dot
+  -- and base64, and include the base64-encoded png as a data: URL.
+  if attr.class and string.match(' ' .. attr.class .. ' ',' dot ') then
+    local png = pipe("base64", pipe("dot -Tpng", s))
+    return '<img src="data:image/png;base64,' .. png .. '"/>'
+  -- otherwise treat as code (one could pipe through a highlighter)
+  else
+    return "<pre><code" .. attributes(attr) .. ">" .. escape(s) ..
+           "</code></pre>"
+  end
 end
 
 function BlockQuote(s)
-  return "<boxed-text>\n" .. s .. "\n</boxed-text>"
+  xml('boxed-text', s)
 end
 
 -- Caption is a string, aligns is an array of strings,
@@ -374,10 +375,10 @@ function Table(caption, aligns, widths, headers, rows)
     table.insert(buffer, s)
   end
   table.insert(buffer, '<table-wrap>')
-  if caption ~= "" then
+  if caption ~= '' then
     -- if caption begins with <bold> text, make it the <title>
     caption = string.gsub('<p>' .. caption, "^<p><bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
-    add('<caption>\n' .. caption .. '</p>\n</caption>\n')
+    add(xml('caption>', caption))
   end
   add("<table>")
   if widths and widths[1] ~= 0 then
@@ -419,39 +420,39 @@ function Table(caption, aligns, widths, headers, rows)
 end
 
 function BulletList(items)
-  local buffer = {}
-  for _, item in pairs(items) do
-    table.insert(buffer, '<list-item><p>' .. item .. '</p></list-item>')
-  end
-  return '<list list-type="bullet">\n' .. table.concat(buffer, '\n') .. '\n</list>'
+  local attr = { ['list-type'] = 'bullet' }
+  return List(items, attr)
 end
 
 function OrderedList(items)
+  local attr = { ['list-type'] = 'order' }
+  return List(items, attr)
+end
+
+function List(items, attr)
   local buffer = {}
   for _, item in pairs(items) do
-    table.insert(buffer, '<list-item><p>' .. item .. '</p></list-item>')
+    table.insert(buffer, xml('list-item', item))
   end
-  return '<list list-type="order">\n' .. table.concat(buffer, '\n') .. '\n</list>'
+  return xml('list', '\n' .. table.concat(buffer, '\n') .. '\n', attr)
 end
 
 -- Revisit association list StackValue instance.
+-- items is a table of tables
 function DefinitionList(items)
   local buffer = {}
   for _,item in pairs(items) do
     for k, v in pairs(item) do
-      table.insert(buffer, '<def-item>\n<term>' .. k .. '</term>\n<def>' ..
-                        table.concat(v,'</def>\n<def>') .. '</def>\n</def-item>')
+      local term = xml('term', k)
+      local def = xml('def', table.concat(v,'</def><def>'))
+      table.insert(buffer, xml('def-item', term .. def))
     end
   end
-  return '<def-list>\n' .. table.concat(buffer, '\n') .. '\n</def-list>'
+  return xml('def-list', '\n' .. table.concat(buffer, '\n') .. '\n')
 end
 
 function Div(s, attr)
-  if attr.class and string.match(' ' .. attr.class .. ' ',' references ') and s ~= '' then
-    return Header(2, "References", attr) .. '\n' .. s:gsub("<p>(.-)</p>", "%1")
-  else
-    return s
-  end
+  return s
 end
 
 -- custom block elements for JATS
@@ -473,24 +474,25 @@ function Section(lev, s, title, attr)
   table.insert(headers, header)
 
   attr = { ['id'] = header['id'], ['sec-type'] = header['sec-type'] }
-  title = title ~= '' and '<title>' .. title .. '</title>' or '<title/>'
-
-  return '<sec' .. attributes(attr) .. '>\n' .. title .. s .. '</sec>\n'
+  title = xml('title', title ~= '' and title or nil)
+  return xml('sec', '\n' .. title .. s, attr)
 end
 
 function SupplementaryMaterial(s, title, attr)
   attr = {}
-  return '<supplementary-material' .. attributes(attr) .. '>\n' ..
-         '<caption>\n<title>' .. title .. '</title>' .. s .. '</caption>\n' ..
-         '</supplementary-material>\n'
+  title = xml('title', title)
+  local caption = xml('caption', title .. s)
+  return xml('supplementary-material', '\n' .. caption .. '\n', attr)
 end
 
 function Ack(s, title)
-  return '<ack>\n<title>' .. title .. '</title>' .. s .. '</ack>\n'
+  title = title and '\n' .. xml('title', title) or ''
+  return xml('ack', title .. s)
 end
 
 function Glossary(s, title, attr)
-  return '<glossary' .. attributes(attr) .. '>\n<title>' .. title .. '</title>' .. s .. '</glossary>\n'
+  title = xml('title', title)
+  return xml('glossary', title .. s, attr)
 end
 
 function RefList(s, title)
@@ -498,7 +500,8 @@ function RefList(s, title)
 
   -- format ids
   s = string.gsub(s, '<ref id="(%d+)">', function (r)
-        return '<ref id="' .. string.format('r%03d', tonumber(r)) .. '">'
+        local attr = { ['id'] = string.format('r%03d', tonumber(r)) }
+        return '<ref ' .. attributes(attr) .. '>'
       end)
 
   for ref in string.gmatch(s, '(<ref.-</ref>)') do
@@ -506,7 +509,8 @@ function RefList(s, title)
   end
 
   if #references > 0 then
-    return '<ref-list>\n<title>' .. title .. '</title>\n' .. table.concat(references, '\n') .. '\n</ref-list>\n'
+    title = xml('title', title)
+    return xml('ref-list', title .. table.concat(references, '\n'), attr)
   else
     return ''
   end
@@ -514,40 +518,41 @@ end
 
 function Ref(s)
   table.insert(references, s)
+  return #references
 end
 
 -- inline elements
 
 function Str(s)
-  return escape(s)
+  return s
 end
 
 function Space()
-  return " "
+  return ' '
 end
 
 function Emph(s)
-  return "<italic>" .. s .. "</italic>"
+  return xml('italic', s)
 end
 
 function Strong(s)
-  return "<bold>" .. s .. "</bold>"
+  return xml('bold', s)
 end
 
 function Strikeout(s)
-  return '<strike>' .. s .. '</strike>'
+  return xml('strike', s)
 end
 
 function Superscript(s)
-  return "<sup>" .. s .. "</sup>"
+  return xml('sup', s)
 end
 
 function Subscript(s)
-  return "<sub>" .. s .. "</sub>"
+  return xml('sub', s)
 end
 
 function SmallCaps(s)
-  return "<sc>" .. s .. "</sc>"
+  return xml('sc', s)
 end
 
 function SingleQuoted(s)
@@ -558,70 +563,78 @@ function DoubleQuoted(s)
   return '"' .. s .. '"'
 end
 
--- format in-text citation, ignore CSL
+-- format in-text citation
 function Cite(s)
   local ids = {}
-  for id in string.gmatch(s, '([^,]+)') do
-    local rid = string.format("r%03d", tonumber(id))
-    table.insert(ids, '<xref ref-type="bibr" rid="' .. rid .. '">[' .. id .. ']</xref>')
+  for id in string.gmatch(s, '(%d+)') do
+    id = tonumber(id)
+    -- workaround to discard year mistakenly taken for key
+    if id and id < 1000 then
+      local attr = { ['ref-type'] = 'bibr',
+                     ['rid'] = string.format("r%03d", id) }
+      table.insert(ids, xml('xref', '[' .. id .. ']', attr))
+    end
   end
-  return table.concat(ids)
+  if #ids > 0 then
+    return table.concat(ids)
+  else
+    -- return original key for backwards compatibility
+    return s
+  end
 end
 
 function Code(s, attr)
-  return "<preformat>" .. escape(s) .. "</preformat>"
+  return xml('preformat', s, attr)
 end
 
 function DisplayMath(s)
-  return '<disp-formula>' .. escape(s) .. '</disp-formula>'
+  return xml('disp-formula', s)
 end
 
 function InlineMath(s)
-  return '<inline-formula>' .. escape(s) .. '</inline-formula>'
+  return xml('inline-formula', s)
 end
 
-function RawInline(format, s)
-  return "<preformat>" .. s .. "</preformat>"
+function RawInline(s)
+  return xml('preformat', s)
 end
 
 function LineBreak()
   return ' '
 end
 
-function Link(s, src, tit)
+function Link(s, src, title)
   if src ~= '' and s ~= '' then
-    return '<ext-link ext-link-type="uri" xlink:href="' .. escape(src) .. '" xlink:type="simple">' .. s .. '</ext-link>'
+    attr = { ['ext-link-type'] = 'uri',
+             ['xlink:href'] = escape(src),
+             ['xlink:title'] = escape(title),
+             ['xlink:type'] = 'simple' }
+
+    return xml('ext-link', s, attr)
   else
     return s
   end
 end
 
-function CaptionedImage(src, s, title)
+function CaptionedImage(s, src, title)
   -- if title begins with <bold> text, make it the <title>
-  title = string.gsub(title, "^<bold>(.-)</bold>%s", "<title>%1</title>\n<p>")
+  title = string.gsub(title, "^<bold>(.-)</bold>%s", function(t) xml('title', t) end)
   local num = #figures + 1
-  local fig = '<fig id="fig-' .. num .. '">\n' ..
-              '<caption>\n' .. title .. '</p>\n</caption>\n' ..
-              Image(s, src, '') ..
-              '</fig>'
+  local attr = { ['id'] = string.format("g%03d", num) }
+  local caption = xml('caption', s)
+  local fig = xml('fig', caption .. Image(nil, src, title), attr)
+
   table.insert(figures, fig)
   return fig
 end
 
 function Image(s, src, title)
-  local attr = { ['xlink:href'] = escape(src), ['xlink:title'] = escape(title) }
-  return '<graphic mimetype="image"' .. attributes(attr) .. ' position="float" xlink:type="simple"/>'
-end
+  local attr = { ['mimetype'] = 'image',
+                 ['xlink:href'] = escape(src),
+                 ['xlink:title'] = escape(title),
+                 ['xlink:type'] = 'simple' }
 
-function Note(s)
-  local num = #notes + 1
-  -- insert the back reference right before the final closing tag.
-  s = s:gsub('(.*)</', '%1 <a href="#fnref' .. num ..  '">&#8617;</a></')
-  -- add a list item with the note to the note table.
-  table.insert(notes, '<fn id="fn' .. num .. '">' .. s .. '</fn>')
-  -- return the footnote reference, linked to the note.
-  return '<a id="fnref' .. num .. '" href="#fn' .. num ..
-            '"><sup>' .. num .. '</sup></a>'
+  return xml('graphic', s, attr)
 end
 
 -- handle bold and italic
@@ -630,6 +643,8 @@ function Span(s, attr)
     return Strong(s)
   elseif attr.style == "font-style:italic" then
     return Emph(s)
+  elseif attr.style == "font-variant: small-caps" then
+    return SmallCaps(s)
   else
     return s
   end
