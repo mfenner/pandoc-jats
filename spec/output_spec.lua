@@ -2,7 +2,6 @@ local inspect = require 'inspect'
 require("../jats")
 
 describe("custom writer functions", function()
-
   it("should escape XML entities", function()
     local result = escape('<')
     local expected = '&lt;'
@@ -18,7 +17,14 @@ describe("custom writer functions", function()
   it("function read_file exists", function()
     assert.is_true(type(read_file) == 'function')
   end)
+end)
 
+describe("Doc", function()
+  it("should build the body", function()
+    local result = Doc('This is a test.')
+    expected = '<body>\n<sec id="sec-1">\n<title/>\nThis is a test.</sec>\n</body>'
+    assert.are.same(result, expected)
+  end)
 end)
 
 describe("xml builder", function()
@@ -50,7 +56,7 @@ describe("sections", function()
 
   it("should build section", function()
     local result = Section(2, 'Some text in the discussion.', 'Discussion', { ['sec-type'] = 'discussion' })
-    expected = '<sec id="sec-1" sec-type="discussion"><title>Discussion</title>Some text in the discussion.</sec>'
+    expected = '<sec id="sec-1.1" sec-type="discussion">\n<title>Discussion</title>Some text in the discussion.</sec>'
     assert.are.same(result, expected)
   end)
 
@@ -62,7 +68,7 @@ describe("sections", function()
 
   it("should build supplementary material", function()
     local result = SupplementaryMaterial('Detailed information about the experiment.', 'S4')
-    expected = '<supplementary-material><caption><title>S4</title>Detailed information about the experiment.</caption></supplementary-material>'
+    expected = '<supplementary-material>\n<caption><title>S4</title>Detailed information about the experiment.</caption>\n</supplementary-material>'
     assert.are.same(result, expected)
   end)
 end)
@@ -71,6 +77,34 @@ describe("references", function()
   it("should insert references", function()
     local result = Ref('<ref></ref>')
     expected = 1
+    assert.are.same(result, expected)
+  end)
+
+  it("should build links", function()
+    local result = Link('PubMed', 'http://www.ncbi.nlm.nih.gov/pubmed/', '24 million citations for biomedical literature')
+    expected = '<ext-link ext-link-type="uri" xlink:href="http://www.ncbi.nlm.nih.gov/pubmed/" xlink:title="24 million citations for biomedical literature" xlink:type="simple">PubMed</ext-link>'
+    assert.are.same(result, expected)
+  end)
+end)
+
+describe("figures", function()
+  it("should build graphic", function()
+    local result = Image(nil, 'hello_world.png', 'A title')
+    expected = '<graphic mimetype="image" xlink:href="hello_world.png" xlink:title="A title" xlink:type="simple"/>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build graphic with object id", function()
+    local object = xml('object_id', '12345')
+    local result = Image(object, 'hello_world.png', 'A title')
+    expected = '<graphic mimetype="image" xlink:href="hello_world.png" xlink:title="A title" xlink:type="simple"><object_id>12345</object_id></graphic>'
+    assert.are.same(result, expected)
+  end)
+
+  it("should build figure", function()
+    local title = xml('title', "Fig. 4")
+    local result = CaptionedImage(title .. "Some describing text", 'hello_world.png', 'A title')
+    expected = '<fig id="g001"><caption><title>Fig. 4</title>Some describing text</caption><graphic mimetype="image" xlink:href="hello_world.png" xlink:title="A title" xlink:type="simple"/></fig>'
     assert.are.same(result, expected)
   end)
 end)
