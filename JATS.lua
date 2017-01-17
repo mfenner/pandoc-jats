@@ -531,6 +531,10 @@ function Space()
   return ' '
 end
 
+function SoftBreak()
+  return ''
+end
+
 function Emph(s)
   return xml('italic', s)
 end
