@@ -567,6 +567,10 @@ function DoubleQuoted(s)
   return '"' .. s .. '"'
 end
 
+function SoftBreak()
+  return "\n"
+end
+
 -- format in-text citation
 function Cite(s)
   local ids = {}
