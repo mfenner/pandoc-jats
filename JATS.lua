@@ -27,6 +27,7 @@ local figures = {}
 -- to pandoc, and pandoc will do the template processing as
 -- usual.
 function Doc(body, metadata, variables)
+  print('running everything')
   meta = metadata or {}
 
   -- if document doesn't start with section, add top-level section without title
@@ -237,6 +238,8 @@ end
 -- Input is iso8601-formatted date as string
 -- Return nil if input is not a valid date
 function date_helper(iso_date)
+  print("logging-date")
+  print(iso_date)
   if not iso_date or string.len(iso_date) ~= 10 then return nil end
 
   _,_,y,m,d = string.find(iso_date, '(%d+)-(%d+)-(%d+)')
@@ -357,8 +360,8 @@ function CodeBlock(s, attr)
     return '<img src="data:image/png;base64,' .. png .. '"/>'
   -- otherwise treat as code (one could pipe through a highlighter)
   else
-    return "<pre><code" .. attributes(attr) .. ">" .. escape(s) ..
-           "</code></pre>"
+    attr.class = nil
+    return Code(s, attr)
   end
 end
 
@@ -479,6 +482,7 @@ function Section(lev, s, title, attr)
 end
 
 function SupplementaryMaterial(s, title, attr)
+  s = fix_citeproc(s)
   attr = {}
   title = xml('title', title)
   local caption = xml('caption', title .. s)
@@ -496,6 +500,7 @@ function Glossary(s, title, attr)
 end
 
 function RefList(s, title)
+  print('running place where fixer called')
   s = fix_citeproc(s)
 
   -- format ids
@@ -588,7 +593,7 @@ function Cite(s)
 end
 
 function Code(s, attr)
-  return xml('preformat', s, attr)
+  return xml('preformat', escape(s), attr)
 end
 
 function DisplayMath(s)
@@ -625,7 +630,7 @@ function CaptionedImage(s, src, title)
   title = string.gsub(title, "^<bold>(.-)</bold>%s", function(t) xml('title', t) end)
   local num = #figures + 1
   local attr = { ['id'] = string.format("g%03d", num) }
-  local caption = xml('caption', s)
+  local caption = xml('caption', xml('p', s))
   local fig = xml('fig', caption .. Image(nil, src, title), attr)
 
   table.insert(figures, fig)
